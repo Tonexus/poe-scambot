@@ -3,7 +3,7 @@ import urllib2
 import json
 import re
 
-parser = argparse.ArgumentParser(description='Rapid searching item searching via the Path of Exile stash tab API')
+parser = argparse.ArgumentParser(description='Rapid item searching via the Path of Exile stash tab API')
 parser.add_argument('init_id', help='id for first page of api to be searched (can usually be found at http://poe.ninja/stats)')
 parser.add_argument('league', help='the league to search')
 parser.add_argument('search_terms', nargs='+', help='the terms used to search')
@@ -11,7 +11,7 @@ parser.add_argument('search_terms', nargs='+', help='the terms used to search')
 args = vars(parser.parse_args())
 
 currency_abbreviated = ['alt', 'fuse', 'alc', 'chaos', 'gcp', 'exa', 'chrom', 'jew', 'chance', 'chisel', 'scour', 'blessed', 'regret', 'regal', 'divine', 'vaal']
-currency_single = ['Orb of Alteration', 'Orb of Fusing', 'Orb of Alchemy', 'Chaos Orb', 'Gemcutter\'s Prism', 'Exalted Orb', 'Chromatic Orb', 'Jeweller\'s Orb', 'Orb of Chance', 'Cartographer\'s Chisel', 'Orb of Scouring', 'Blessed Orb', 'Orb of Regret', 'Regal Orb', 'Divine Orb', 'Vaal Orb']
+currency_singular = ['Orb of Alteration', 'Orb of Fusing', 'Orb of Alchemy', 'Chaos Orb', 'Gemcutter\'s Prism', 'Exalted Orb', 'Chromatic Orb', 'Jeweller\'s Orb', 'Orb of Chance', 'Cartographer\'s Chisel', 'Orb of Scouring', 'Blessed Orb', 'Orb of Regret', 'Regal Orb', 'Divine Orb', 'Vaal Orb']
 currency_plural = ['Orbs of Alteration', 'Orbs of Fusing', 'Orbs of Alchemy', 'Chaos Orbs', 'Gemcutter\'s Prisms', 'Exalted Orbs', 'Chromatic Orbs', 'Jeweller\'s Orbs', 'Orbs of Chance', 'Cartographer\'s Chisels', 'Orbs of Scouring', 'Blessed Orbs', 'Orbs of Regret', 'Regal Orbs', 'Divine Orbs', 'Vaal Orbs']
 
 price_regex = re.compile('~(b/o|price) ([0-9]+) (alt|fuse|alch|chaos|gcp|exa|chrom|jew|chance|chisel|scour|blessed|regret|regal|divine|vaal)')
@@ -24,7 +24,7 @@ def parse_price(to_parse):
     price = round(float(to_parse[0]), 1)
     
     if price == 1.0:
-        return str(price) + ' ' + currency_single[currency_abbreviated.index(to_parse[1])]
+        return str(price) + ' ' + currency_singular[currency_abbreviated.index(to_parse[1])]
     else:
         return str(price) + ' ' + currency_plural[currency_abbreviated.index(to_parse[1])]
 
