@@ -1,9 +1,10 @@
-import argparse
 import urllib.request
 import json
 import re
 import tkinter as tk
 from tkinter import ttk
+import threading
+import queue
 
 currency_abbreviated = ['alt', 'fuse', 'alc', 'chaos', 'gcp', 'exa', 'chrom', 'jew', 'chance', 'chisel', 'scour', 'blessed', 'regret', 'regal', 'divine', 'vaal']
 currency_singular = ['Orb of Alteration', 'Orb of Fusing', 'Orb of Alchemy', 'Chaos Orb', 'Gemcutter\'s Prism', 'Exalted Orb', 'Chromatic Orb', 'Jeweller\'s Orb', 'Orb of Chance', 'Cartographer\'s Chisel', 'Orb of Scouring', 'Blessed Orb', 'Orb of Regret', 'Regal Orb', 'Divine Orb', 'Vaal Orb']
@@ -12,6 +13,53 @@ currency_plural = ['Orbs of Alteration', 'Orbs of Fusing', 'Orbs of Alchemy', 'C
 price_regex = re.compile('~(b/o|price) ([0-9]+) (alt|fuse|alch|chaos|gcp|exa|chrom|jew|chance|chisel|scour|blessed|regret|regal|divine|vaal)')
 
 stash_api = 'http://pathofexile.com/api/public-stash-tabs?id='
+
+class ParserThread(threading.Thread):
+    def __init__(self, spawner, parse_id, league, terms):
+        threading.Thread.__init__(self)
+        self.spawner = spawner
+        self.parse_id = parse_id
+        self.league = league
+        self.terms = terms
+        self.start()
+
+    def parse_price(self, to_parse):
+        price = round(float(to_parse[0]), 1)
+        
+        if price == 1.0:
+            return str(price) + ' ' + currency_singular[currency_abbreviated.index(to_parse[1])]
+        else:
+            return str(price) + ' ' + currency_plural[currency_abbreviated.index(to_parse[1])]
+        
+    def get_stashes(self):
+        stash_data = json.loads(urllib.request.urlopen(stash_api + self.parse_id).read())
+        self.spawner.queue_parse_ids.put(stash_data['next_change_id'])
+        self.stashes = stash_data['stashes']
+        
+    def run(self):
+        self.get_stashes()
+        self.parse_stashes()
+    
+    def parse_stashes(self):
+        for stash in self.stashes:
+            for item in stash['items']:
+                if item['league'] == self.league:
+                    for term in self.terms.split(', '):
+                        if term in item['name']:
+                            price_regex_match = price_regex.match(stash['stash'])
+                            try:
+                                price_regex_match = price_regex.match(item['note'])
+                            except KeyError:
+                                pass
+                            if price_regex_match:
+                                self.spawner.queue_results.put('@' + stash['accountName'] + ' Hi, I would like to buy your ' \
+                                      + item['name'][28:] + ' listed for ' + self.parse_price(price_regex_match.group(2, 3)) \
+                                      + ' in ' + item['league'] + ' (stash tab \"' + stash['stash'] + '\"; position: left ' + \
+                                      str(item['x']) + ', top ' + str(item['y']) + ')\n\n')
+                            else:
+                                self.spawner.queue_results.put('@' + stash['accountName'] + ' Hi, I would like to buy your ' \
+                                      + item['name'][28:] + ' in ' + item['league'] + ' (stash tab \"' + stash['stash'] \
+                                      + '\"; position: left ' + str(item['x']) + ', top ' + str(item['y']) + ')\n\n')
 
 class App(tk.Tk):
 
@@ -23,7 +71,10 @@ class App(tk.Tk):
         self.protocol('WM_DELETE_WINDOW', self.destroy)
         self.make_topmost()
         
-        self.parse_id = ''
+        self.subthreads = 0
+        self.queue_parse_ids = queue.Queue()
+        self.queue_results = queue.Queue()
+        self.start = False
         
         self.results = tk.StringVar()
         self.league = tk.StringVar()
@@ -41,6 +92,8 @@ class App(tk.Tk):
         self.create_option_terms()
         self.create_button_start()
         self.create_button_stop()
+        
+        self.after(500, self.check_queue)
 
     def create_search_results(self):
         self.results_frame = ttk.Frame(self)
@@ -100,41 +153,23 @@ class App(tk.Tk):
         self.attributes('-topmost', 1)
         self.attributes('-topmost', 0)
 
-    def parse_price(self, to_parse):
-        price = round(float(to_parse[0]), 1)
-        
-        if price == 1.0:
-            return str(price) + ' ' + currency_singular[currency_abbreviated.index(to_parse[1])]
-        else:
-            return str(price) + ' ' + currency_plural[currency_abbreviated.index(to_parse[1])]
-
     def parse_stash_data(self):
-        stash_data = json.loads(urllib.request.urlopen(stash_api + self.parse_id).read())
-        search_terms = self.terms.get().split(', ')
-        self.parse_id = stash_data['next_change_id']
+        self.print_results('Starting search...\n\n')
+        if self.queue_parse_ids.empty():
+            ParserThread(self, '', self.league.get(), self.terms.get())
+        else:
+            ParserThread(self, self.queue_parse_ids.get(), self.league.get(), self.terms.get())
+
+    def check_queue(self):
+        if not self.queue_results.empty():
+            self.print_results(self.queue_results.get())
+        self.after(500, self.check_queue)
         
-        for stash in stash_data['stashes']:
-            for item in stash['items']:
-                if item['league'] == self.league.get():
-                    for search_term in search_terms:
-                        if search_term in item['name']:
-                            price_regex_match = price_regex.match(stash['stash'])
-                            try:
-                                price_regex_match = price_regex.match(item['note'])
-                            except KeyError:
-                                pass
-                            self.results_text.configure(state='normal')
-                            if price_regex_match:
-                                self.results_text.insert(tk.END, '@' + stash['accountName'] + ' Hi, I would like to buy your ' \
-                                      + item['name'][28:] + ' listed for ' + self.parse_price(price_regex_match.group(2, 3)) \
-                                      + ' in ' + item['league'] + ' (stash tab \"' + stash['stash'] + '\"; position: left ' + \
-                                      str(item['x']) + ', top ' + str(item['y']) + ')\n\n')
-                            else:
-                                self.results_text.insert(tk.END, '@' + stash['accountName'] + ' Hi, I would like to buy your ' \
-                                      + item['name'][28:] + ' in ' + item['league'] + ' (stash tab \"' + stash['stash'] \
-                                      + '\"; position: left ' + str(item['x']) + ', top ' + str(item['y']) + ')\n\n')
-                            self.results_text.configure(state='normal')
-
-
+    def print_results(self, string):
+        self.results_text.configure(state='normal')
+        self.results_text.insert(tk.END, string)
+        self.results_text.configure(state='disabled')
+            
+            
 if __name__ == '__main__':
     App().mainloop()
