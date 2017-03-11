@@ -1,5 +1,5 @@
 import argparse
-import urllib2
+import urllib.request
 import json
 import re
 
@@ -29,7 +29,7 @@ def parse_price(to_parse):
         return str(price) + ' ' + currency_plural[currency_abbreviated.index(to_parse[1])]
 
 def parse_stash_data(parse_id):
-    stash_data = json.loads(urllib2.urlopen(stash_api + parse_id).read())
+    stash_data = json.loads(urllib.request.urlopen(stash_api + parse_id).read())
     
     for stash in stash_data['stashes']:
         for item in stash['items']:
@@ -42,14 +42,14 @@ def parse_stash_data(parse_id):
                         except KeyError:
                             pass
                         if price_regex_match:
-                            print '@' + stash['accountName'] + ' Hi, I would like to buy your ' + item['name'][28:] + \
+                            print('@' + stash['accountName'] + ' Hi, I would like to buy your ' + item['name'][28:] + \
                                   ' listed for ' + parse_price(price_regex_match.group(2, 3)) + ' in ' + \
                                   item['league'] + ' (stash tab \"' + stash['stash'] + '\"; position: left ' + \
-                                  str(item['x']) + ', top ' + str(item['y']) + ')'
+                                  str(item['x']) + ', top ' + str(item['y']) + ')')
                         else:
-                            print '@' + stash['accountName'] + ' Hi, I would like to buy your ' + item['name'][28:] + \
+                            print('@' + stash['accountName'] + ' Hi, I would like to buy your ' + item['name'][28:] + \
                                   ' in ' + item['league'] + ' (stash tab \"' + stash['stash'] + '\"; position: left ' + \
-                                  str(item['x']) + ', top ' + str(item['y']) + ')'
+                                  str(item['x']) + ', top ' + str(item['y']) + ')')
     
     return stash_data['next_change_id']
 
