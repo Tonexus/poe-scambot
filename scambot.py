@@ -41,6 +41,7 @@ class ParserThread(threading.Thread):
         self.parse_stashes()
     
     def parse_stashes(self):
+        self.spawner.queue_results.put('Parsing page ' + self.parse_id + '...\n\n')
         for stash in self.stashes:
             for item in stash['items']:
                 if item['league'] == self.league:
@@ -60,13 +61,14 @@ class ParserThread(threading.Thread):
                                 self.spawner.queue_results.put('@' + stash['accountName'] + ' Hi, I would like to buy your ' \
                                       + item['name'][28:] + ' in ' + item['league'] + ' (stash tab \"' + stash['stash'] \
                                       + '\"; position: left ' + str(item['x']) + ', top ' + str(item['y']) + ')\n\n')
+        self.spawner.queue_results.put('End of page ' + self.parse_id + '.\n\n')
 
 class App(tk.Tk):
 
     def __init__(self):
         tk.Tk.__init__(self)
         self.title('PoE Stash Searcher')
-        self.geometry('500x210+900+200')
+        self.geometry('800x400+900+200')
         self.resizable(False, False)
         self.protocol('WM_DELETE_WINDOW', self.destroy)
         self.make_topmost()
@@ -97,9 +99,9 @@ class App(tk.Tk):
 
     def create_search_results(self):
         self.results_frame = ttk.Frame(self)
-        self.results_frame.grid(row=0, column=0, rowspan=5, columnspan=4, padx=5, pady=5)
+        self.results_frame.grid(row=0, column=0, rowspan=15, columnspan=8, padx=5, pady=5)
         
-        self.results_text = tk.Text(self.results_frame, height=10, width=39)
+        self.results_text = tk.Text(self.results_frame, height=20, width=76)
         self.results_text.grid(row=0, column=0)
         self.results_text.configure(state='disabled')
         
@@ -110,43 +112,43 @@ class App(tk.Tk):
         
     def create_label_league(self):
         self.label_league = ttk.Label(self, text='League')
-        self.label_league.grid(row=0, column=4, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        self.label_league.grid(row=0, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
         
     def create_option_league(self):
         self.option_league = ttk.Combobox(self, textvariable=self.league, state='readonly', width=20)
-        self.option_league.grid(row=1, column=4, columnspan=2, padx=5, pady=1)
+        self.option_league.grid(row=1, column=8, columnspan=2, padx=5, pady=1)
         self.option_league['values'] = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
         self.option_league.current(0)
         
     def create_label_maxprice(self):
         self.label_maxprice = ttk.Label(self, text='Maximum Price')
-        self.label_maxprice.grid(row=2, column=4, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        self.label_maxprice.grid(row=2, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
         
     def create_option_maxprice(self):
         self.option_maxprice = ttk.Entry(self, textvariable=self.maxprice, width=10)
-        self.option_maxprice.grid(row=3, column=4, padx=5, pady=1)
+        self.option_maxprice.grid(row=3, column=8, padx=5, pady=1)
         
     def create_option_currency(self):
         self.option_currency = ttk.Combobox(self, textvariable=self.currency, state='readonly', width=7)
-        self.option_currency.grid(row=3, column=5, padx=5, pady=1)
+        self.option_currency.grid(row=3, column=9, padx=5, pady=1)
         self.option_currency['values'] = currency_abbreviated
         self.option_currency.current(0)
         
     def create_label_terms(self):
         self.lable_terms = ttk.Label(self, text='Search Terms')
-        self.lable_terms.grid(row=5, column=0, padx=5, pady=5, sticky=tk.W)
+        self.lable_terms.grid(row=15, column=0, padx=5, pady=5, sticky=tk.W)
         
     def create_option_terms(self):
-        self.option_terms = ttk.Entry(self, textvariable=self.terms, width=39)
-        self.option_terms.grid(row=5, column=1, columnspan=2, padx=5, pady=5)
+        self.option_terms = ttk.Entry(self, textvariable=self.terms, width=50)
+        self.option_terms.grid(row=15, column=1, columnspan=7, padx=5, pady=5)
         
     def create_button_start(self):
         self.button_start = ttk.Button(self, text='Start', command=self.start_parsing, width=9)
-        self.button_start.grid(row=5, column=4, padx=5, pady=5)
+        self.button_start.grid(row=15, column=8, padx=5, pady=5)
         
     def create_button_stop(self):
         self.button_stop = ttk.Button(self, text='Stop', command=self.stop_parsing, state='disabled', width=9)
-        self.button_stop.grid(row=5, column=5, padx=5, pady=5)
+        self.button_stop.grid(row=15, column=9, padx=5, pady=5)
 
     def make_topmost(self):
         self.lift()
@@ -161,7 +163,8 @@ class App(tk.Tk):
         self.button_stop.configure(state='normal')
         self.print_results('Starting search...\n\n')
         self.start = True
-        ParserThread(self, '', self.league.get(), self.terms.get())
+        if self.queue_parse_ids.empty():
+            self.queue_parse_ids.put('')
         self.parse_stash_data()
         
     def stop_parsing(self):
