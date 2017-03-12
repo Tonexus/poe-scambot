@@ -1,0 +1,19 @@
+Requirements: Windows, Python 3.6
+
+Usage:
+1. Run scambot.py (if you don't like the console window in the
+   background, rename scambot.py to scambot.pyw, and run that)
+
+2. Under the default settings, simply input the search terms
+   (separated by a comma and a space) and the desired league, max
+   price, min price, and currency then press "Start". The app will
+   automatically start searching for items with the search terms
+   included in the item names and with the desired price in the
+   desired league.
+
+3. Start playing Path of Exile.
+
+4. When the app finds a result, it will play a tone and copy a
+   whisper message to your clipboard.
+
+5. Paste the message into chat and profit!

@@ -113,7 +113,6 @@ class App(tk.Tk):
         self.minprice.set(float(config.get('defaults', 'minprice')))
         
         self.max_console_size = int(config.get('output', 'max_console_size'))
-        self.slim = True if config.get('output', 'slim') == 'y' else False
         self.clipboard = True if config.get('output', 'clipboard') == 'y' else False
         self.log = True if config.get('output', 'log') == 'y' else False
         if self.log:
