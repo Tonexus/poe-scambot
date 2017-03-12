@@ -6,7 +6,7 @@ from tkinter import ttk
 import threading
 import queue
 
-currency_abbreviated = ['alt', 'fuse', 'alc', 'chaos', 'gcp', 'exa', 'chrom', 'jew', 'chance', 'chisel', 'scour', 'blessed', 'regret', 'regal', 'divine', 'vaal']
+currency_abbreviated = ['alt', 'fuse', 'alch', 'chaos', 'gcp', 'exa', 'chrom', 'jew', 'chance', 'chisel', 'scour', 'blessed', 'regret', 'regal', 'divine', 'vaal']
 currency_singular = ['Orb of Alteration', 'Orb of Fusing', 'Orb of Alchemy', 'Chaos Orb', 'Gemcutter\'s Prism', 'Exalted Orb', 'Chromatic Orb', 'Jeweller\'s Orb', 'Orb of Chance', 'Cartographer\'s Chisel', 'Orb of Scouring', 'Blessed Orb', 'Orb of Regret', 'Regal Orb', 'Divine Orb', 'Vaal Orb']
 currency_plural = ['Orbs of Alteration', 'Orbs of Fusing', 'Orbs of Alchemy', 'Chaos Orbs', 'Gemcutter\'s Prisms', 'Exalted Orbs', 'Chromatic Orbs', 'Jeweller\'s Orbs', 'Orbs of Chance', 'Cartographer\'s Chisels', 'Orbs of Scouring', 'Blessed Orbs', 'Orbs of Regret', 'Regal Orbs', 'Divine Orbs', 'Vaal Orbs']
 
@@ -141,24 +141,40 @@ class App(tk.Tk):
         self.option_terms.grid(row=5, column=1, columnspan=2, padx=5, pady=5)
         
     def create_button_start(self):
-        self.button_start = ttk.Button(self, text='Start', command=self.parse_stash_data, width=9)
+        self.button_start = ttk.Button(self, text='Start', command=self.start_parsing, width=9)
         self.button_start.grid(row=5, column=4, padx=5, pady=5)
         
     def create_button_stop(self):
-        self.button_stop = ttk.Button(self, text='Stop', state=tk.DISABLED, width=9)
+        self.button_stop = ttk.Button(self, text='Stop', command=self.stop_parsing, state='disabled', width=9)
         self.button_stop.grid(row=5, column=5, padx=5, pady=5)
 
     def make_topmost(self):
         self.lift()
         self.attributes('-topmost', 1)
         self.attributes('-topmost', 0)
-
-    def parse_stash_data(self):
+        
+    def start_parsing(self):
+        self.results_text.configure(state='normal')
+        self.results_text.delete(1.0, tk.END)
+        self.results_text.configure(state='disabled')
+        self.button_start.configure(state='disabled')
+        self.button_stop.configure(state='normal')
         self.print_results('Starting search...\n\n')
-        if self.queue_parse_ids.empty():
-            ParserThread(self, '', self.league.get(), self.terms.get())
-        else:
-            ParserThread(self, self.queue_parse_ids.get(), self.league.get(), self.terms.get())
+        self.start = True
+        ParserThread(self, '', self.league.get(), self.terms.get())
+        self.parse_stash_data()
+        
+    def stop_parsing(self):
+        self.button_stop.configure(state='disabled')
+        self.button_start.configure(state='normal')
+        self.print_results('Stopping search...\n\n')
+        self.start = False
+        
+    def parse_stash_data(self):
+        if self.start:
+            if not self.queue_parse_ids.empty():
+                ParserThread(self, self.queue_parse_ids.get(), self.league.get(), self.terms.get())
+            self.after(500, self.parse_stash_data)
 
     def check_queue(self):
         if not self.queue_results.empty():
