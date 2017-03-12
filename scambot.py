@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 import threading
 import queue
+import winsound
 
 currency_abbreviated = ['alt', 'fuse', 'alch', 'chaos', 'gcp', 'exa', 'chrom', 'jew', 'chance', 'chisel', 'scour', 'blessed', 'regret', 'regal', 'divine', 'vaal']
 currency_singular = ['Orb of Alteration', 'Orb of Fusing', 'Orb of Alchemy', 'Chaos Orb', 'Gemcutter\'s Prism', 'Exalted Orb', 'Chromatic Orb', 'Jeweller\'s Orb', 'Orb of Chance', 'Cartographer\'s Chisel', 'Orb of Scouring', 'Blessed Orb', 'Orb of Regret', 'Regal Orb', 'Divine Orb', 'Vaal Orb']
@@ -14,9 +15,24 @@ price_regex = re.compile('~(b/o|price) ([0-9]+) (alt|fuse|alch|chaos|gcp|exa|chr
 
 stash_api = 'http://pathofexile.com/api/public-stash-tabs?id='
 
+class BeepThread(threading.Thread):
+    def __init__(self, spawner):
+        threading.Thread.__init__(self)
+        self.spawner = spawner
+        self.dead = False
+        self.start()
+        
+    def run(self):
+        winsound.Beep(440, 1000)
+        self.spawner.subthreads.remove(self)
+    
+    def kill(self):
+        self.dead = True
+
 class ParserThread(threading.Thread):
     def __init__(self, spawner, parse_id, league, terms):
         threading.Thread.__init__(self)
+        self.dead = False
         self.spawner = spawner
         self.parse_id = parse_id
         self.league = league
@@ -27,17 +43,15 @@ class ParserThread(threading.Thread):
         stash_data = json.loads(urllib.request.urlopen(stash_api + self.parse_id).read())
         self.spawner.parse_id.set(stash_data['next_change_id'])
         self.stashes = stash_data['stashes']
-        
-    def run(self):
-        self.get_stashes()
-        self.parse_stashes()
     
     def parse_stashes(self):
-        # self.spawner.queue_results.put('Parsing page ' + self.parse_id + '...\n\n')
         for stash in self.stashes:
             for item in stash['items']:
                 if item['league'] == self.league:
                     for term in self.terms.split(', '):
+                        if self.dead:
+                            print('dead')
+                            return
                         if term.lower() in item['name'].lower():
                             price_regex_match = price_regex.match(stash['stash'])
                             try:
@@ -48,7 +62,14 @@ class ParserThread(threading.Thread):
                                 self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':item['name'][28:],
                                                                 'price':price_regex_match, 'league':item['league'],
                                                                 'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
-        # self.spawner.queue_results.put('End of page ' + self.parse_id + '.\n\n')
+        
+    def run(self):
+        self.get_stashes()
+        self.parse_stashes()
+        self.spawner.subthreads.remove(self)
+    
+    def kill(self):
+        self.dead = True
 
 class App(tk.Tk):
 
@@ -57,12 +78,13 @@ class App(tk.Tk):
         self.title('PoE Stash Searcher')
         self.geometry('800x375+900+200')
         self.resizable(False, False)
-        self.protocol('WM_DELETE_WINDOW', self.destroy)
+        self.protocol('WM_DELETE_WINDOW', self.kill)
         self.make_topmost()
         
-        self.subthreads = 0
+        self.subthreads = []
         self.queue_results = queue.Queue()
         self.start = False
+        self.dead = False
         
         self.parse_id_old = ''
         self.parse_id = tk.StringVar()
@@ -154,6 +176,28 @@ class App(tk.Tk):
         self.attributes('-topmost', 1)
         self.attributes('-topmost', 0)
         
+    def kill(self):
+        self.protocol('WM_DELETE_WINDOW', None)
+        self.dead = True
+        self.button_start.configure(state='disabled')
+        self.button_stop.configure(state='disabled')
+        self.option_parse_id.configure(state='disabled')
+        self.option_league.configure(state='disabled')
+        self.option_maxprice.configure(state='disabled')
+        self.option_currency.configure(state='disabled')
+        self.option_terms.configure(state='disabled')
+        for thread in self.subthreads:
+            thread.kill()
+        self.kill_loop()
+        
+    def kill_loop(self):
+        if len(self.subthreads) == 0:
+            self.destroy()
+        else:
+            self.print_results('Waiting for subthreads to terminate...\n\n')
+        self.after(2000, self.kill_loop)
+                
+        
     def start_parsing(self):
         self.results_text.configure(state='normal')
         self.results_text.delete(1.0, tk.END)
@@ -183,16 +227,16 @@ class App(tk.Tk):
         self.start = False
         
     def parse_stash_data(self):
-        if self.start:
+        if self.start and not self.dead:
             parse_id_new = self.parse_id.get()
             if not parse_id_new == self.parse_id_old:
-                ParserThread(self, parse_id_new, self.league.get(), self.terms.get())
+                self.print_results('Parsing ' + parse_id_new + '...\n\n')
+                self.subthreads.append(ParserThread(self, parse_id_new, self.league.get(), self.terms.get()))
                 self.parse_id_old = parse_id_new
             self.after(500, self.parse_stash_data)
 
     def parse_price(self, to_parse):
         price = round(float(to_parse[0]), 1)
-        
         if price == 1.0:
             return str(price) + ' ' + currency_singular[currency_abbreviated.index(to_parse[1])]
         else:
@@ -202,10 +246,13 @@ class App(tk.Tk):
         if not self.queue_results.empty():
             sale = self.queue_results.get()
             if sale['price'].group(3) == self.currency.get() and float(sale['price'].group(2)) <= self.maxprice.get():
-                self.print_results('@' + sale['name'] + ' Hi, I would like to buy your ' \
-                                   + sale['item'] + ' listed for ' + self.parse_price(sale['price'].group(2, 3)) \
-                                   + ' in ' + sale['league'] + ' (stash tab \"' + sale['stash'] + '\"; position: left ' \
-                                   + str(sale['x']) + ', top ' + str(sale['y']) + ')\n\n')
+                results = '@' + sale['name'] + ' Hi, I would like to buy your ' + sale['item'] + ' listed for ' \
+                          + self.parse_price(sale['price'].group(2, 3)) + ' in ' + sale['league'] \
+                          + ' (stash tab \"' + sale['stash'] + '\"; position: left ' + str(sale['x']) + ', top ' \
+                          + str(sale['y']) + ')'
+                self.copy_results(results)
+                self.print_results('Found result:\n' + results + '\n\n')
+                self.subthreads.append(BeepThread(self))
         self.after(500, self.check_queue)
         
     def print_results(self, string):
@@ -216,6 +263,9 @@ class App(tk.Tk):
             self.results_text.see(tk.END)
         self.results_text.configure(state='disabled')
             
+    def copy_results(self, string):
+        self.clipboard_clear()
+        self.clipboard_append(string)
             
 if __name__ == '__main__':
     App().mainloop()
