@@ -41,7 +41,8 @@ class ParserThread(threading.Thread):
         
     def get_stashes(self):
         stash_data = json.loads(urllib.request.urlopen(stash_api + self.parse_id).read())
-        self.spawner.parse_id.set(stash_data['next_change_id'])
+        self.spawner.queue_parse_ids.put(stash_data['next_change_id'])
+        # self.spawner.parse_id.set(stash_data['next_change_id'])
         self.stashes = stash_data['stashes']
     
     def parse_stashes(self):
@@ -83,6 +84,7 @@ class App(tk.Tk):
         
         self.subthreads = []
         self.queue_results = queue.Queue()
+        self.queue_parse_ids = queue.Queue()
         self.start = False
         self.dead = False
         
@@ -90,6 +92,7 @@ class App(tk.Tk):
         self.parse_id = tk.StringVar()
         self.league = tk.StringVar()
         self.maxprice = tk.DoubleVar()
+        self.minprice = tk.DoubleVar()
         self.currency = tk.StringVar()
         self.terms = tk.StringVar()
         
@@ -101,6 +104,8 @@ class App(tk.Tk):
         self.create_label_maxprice()
         self.create_option_maxprice()
         self.create_option_currency()
+        self.create_label_minprice()
+        self.create_option_minprice()
         self.create_label_terms()
         self.create_option_terms()
         self.create_button_start()
@@ -149,11 +154,27 @@ class App(tk.Tk):
         self.option_maxprice.delete(0, tk.END)
         self.option_maxprice.insert(0, '20')
         
+    def create_label_minprice(self):
+        self.label_minprice = ttk.Label(self, text='Minimum Price')
+        self.label_minprice.grid(row=6, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        
+    def create_option_minprice(self):
+        self.option_minprice = ttk.Entry(self, textvariable=self.minprice, width=10)
+        self.option_minprice.grid(row=7, column=8, padx=5, pady=1)
+        self.option_minprice.delete(0, tk.END)
+        self.option_minprice.insert(0, '1')
+        
     def create_option_currency(self):
-        self.option_currency = ttk.Combobox(self, textvariable=self.currency, state='readonly', width=7)
-        self.option_currency.grid(row=5, column=9, padx=5, pady=1)
-        self.option_currency['values'] = currency_abbreviated
-        self.option_currency.current(3)
+        self.option_currency = []
+        self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=7))
+        self.option_currency[0].grid(row=5, column=9, padx=5, pady=1)
+        self.option_currency[0]['values'] = currency_abbreviated
+        self.option_currency[0].current(3)
+        
+        self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=7))
+        self.option_currency[1].grid(row=7, column=9, padx=5, pady=1)
+        self.option_currency[1]['values'] = currency_abbreviated
+        self.option_currency[1].current(3)
         
     def create_label_terms(self):
         self.lable_terms = ttk.Label(self, text='Search Terms')
@@ -184,7 +205,9 @@ class App(tk.Tk):
         self.option_parse_id.configure(state='disabled')
         self.option_league.configure(state='disabled')
         self.option_maxprice.configure(state='disabled')
-        self.option_currency.configure(state='disabled')
+        self.option_minprice.configure(state='disabled')
+        self.option_currency[0].configure(state='disabled')
+        self.option_currency[1].configure(state='disabled')
         self.option_terms.configure(state='disabled')
         for thread in self.subthreads:
             thread.kill()
@@ -207,12 +230,13 @@ class App(tk.Tk):
         self.option_parse_id.configure(state='disabled')
         self.option_league.configure(state='disabled')
         self.option_maxprice.configure(state='disabled')
-        self.option_currency.configure(state='disabled')
+        self.option_minprice.configure(state='disabled')
+        self.option_currency[0].configure(state='disabled')
+        self.option_currency[1].configure(state='disabled')
         self.option_terms.configure(state='disabled')
         self.print_results('Starting search...\n\n')
         self.start = True
-        if not self.parse_id.get():
-            self.parse_id.set(' ')
+        self.queue_parse_ids.put(self.parse_id.get())
         self.parse_stash_data()
         
     def stop_parsing(self):
@@ -221,18 +245,22 @@ class App(tk.Tk):
         self.option_parse_id.configure(state='normal')
         self.option_league.configure(state='normal')
         self.option_maxprice.configure(state='normal')
-        self.option_currency.configure(state='normal')
+        self.option_minprice.configure(state='normal')
+        self.option_currency[0].configure(state='normal')
+        self.option_currency[1].configure(state='normal')
         self.option_terms.configure(state='normal')
         self.print_results('Stopping search...\n\n')
         self.start = False
         
     def parse_stash_data(self):
         if self.start and not self.dead:
-            parse_id_new = self.parse_id.get()
-            if not parse_id_new == self.parse_id_old:
-                self.print_results('Parsing ' + parse_id_new + '...\n\n')
-                self.subthreads.append(ParserThread(self, parse_id_new, self.league.get(), self.terms.get()))
-                self.parse_id_old = parse_id_new
+            parse_id = None
+            while not self.queue_parse_ids.empty():
+                parse_id = self.queue_parse_ids.get()
+            if parse_id is not None:
+                self.print_results('Parsing ' + parse_id + '...\n\n')
+                self.subthreads.append(ParserThread(self, parse_id, self.league.get(), self.terms.get()))
+                self.parse_id.set(parse_id)
             self.after(500, self.parse_stash_data)
 
     def parse_price(self, to_parse):
@@ -245,7 +273,9 @@ class App(tk.Tk):
     def check_queue(self):
         if not self.queue_results.empty():
             sale = self.queue_results.get()
-            if sale['price'].group(3) == self.currency.get() and float(sale['price'].group(2)) <= self.maxprice.get():
+            if sale['price'].group(3) == self.currency.get() \
+               and float(sale['price'].group(2)) <= self.maxprice.get() \
+               and float(sale['price'].group(2)) >= self.minprice.get():
                 results = '@' + sale['name'] + ' Hi, I would like to buy your ' + sale['item'] + ' listed for ' \
                           + self.parse_price(sale['price'].group(2, 3)) + ' in ' + sale['league'] \
                           + ' (stash tab \"' + sale['stash'] + '\"; position: left ' + str(sale['x']) + ', top ' \
