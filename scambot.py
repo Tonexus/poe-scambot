@@ -1,97 +1,13 @@
-import urllib.request
-import json
-import re
 import tkinter as tk
 from tkinter import ttk
-import threading
 import queue
-import winsound
+
+import parserthread as pt
+import beepthread as bt
 
 currency_abbreviated = ['alt', 'fuse', 'alch', 'chaos', 'gcp', 'exa', 'chrom', 'jew', 'chance', 'chisel', 'scour', 'blessed', 'regret', 'regal', 'divine', 'vaal']
 currency_singular = ['Orb of Alteration', 'Orb of Fusing', 'Orb of Alchemy', 'Chaos Orb', 'Gemcutter\'s Prism', 'Exalted Orb', 'Chromatic Orb', 'Jeweller\'s Orb', 'Orb of Chance', 'Cartographer\'s Chisel', 'Orb of Scouring', 'Blessed Orb', 'Orb of Regret', 'Regal Orb', 'Divine Orb', 'Vaal Orb']
 currency_plural = ['Orbs of Alteration', 'Orbs of Fusing', 'Orbs of Alchemy', 'Chaos Orbs', 'Gemcutter\'s Prisms', 'Exalted Orbs', 'Chromatic Orbs', 'Jeweller\'s Orbs', 'Orbs of Chance', 'Cartographer\'s Chisels', 'Orbs of Scouring', 'Blessed Orbs', 'Orbs of Regret', 'Regal Orbs', 'Divine Orbs', 'Vaal Orbs']
-
-# price_regex = re.compile('~(b/o|price) ([0-9]+) (alt|fuse|alch|chaos|gcp|exa|chrom|jew|chance|chisel|scour|blessed|regret|regal|divine|vaal)')
-
-stash_api = 'http://pathofexile.com/api/public-stash-tabs?id='
-
-class BeepThread(threading.Thread):
-    """Thread that handles audio notifications."""
-    
-    def __init__(self, spawner):
-        """Initializes the thread with a reference to the creator thread."""
-        threading.Thread.__init__(self)
-        self.spawner = spawner
-        self.start()
-        
-    def run(self):
-        """Main action of the thread. Plays a tone."""
-        winsound.Beep(440, 1000)
-        self.spawner.subthreads.remove(self)
-    
-    def kill(self):
-        """Thread dies in 1 second anyways."""
-        pass
-
-class ParserThread(threading.Thread):
-    """Thread that parses each chunk of stash API data"""
-
-    def __init__(self, spawner, parse_id, league, maxprice, minprice, currency, terms):
-        """Initializes the thread with a reference to the creator thread and specified seearch parameters."""
-        threading.Thread.__init__(self)
-        self.dead = False
-        self.spawner = spawner
-        self.parse_id = parse_id
-        self.league = league
-        self.maxprice = maxprice
-        self.minprice = minprice
-        self.currency = currency
-        self.terms = terms
-        self.start()
-        
-    def get_stashes(self):
-        """Reads the JSON data from the stash API into a dictionary.
-        Also returns the id of the next chunk of data to the main thread via queue.
-        """
-        stash_data = json.loads(urllib.request.urlopen(stash_api + self.parse_id).read())
-        self.spawner.queue_parse_ids.put(stash_data['next_change_id'])
-        self.stashes = stash_data['stashes']
-    
-    def parse_stashes(self):
-        """Parses the stash data for items matching input specifications.
-        Returns matching items to the main thread via queue.
-        """
-        price_regex = re.compile('~(b/o|price) ([0-9]+) (' + self.currency + ')')
-        for stash in self.stashes:
-            for item in stash['items']:
-                if item['league'] == self.league:
-                    for term in self.terms.split(', '):
-                        if self.dead:
-                            print('dead')
-                            return
-                        if term.lower() in item['name'].lower():
-                            price_regex_match = price_regex.match(stash['stash'])
-                            try:
-                                price_regex_match = price_regex.match(item['note'])
-                                if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
-                                   and float(price_regex_match.group(2)) >= self.minprice:
-                                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':item['name'][28:],
-                                                                    'price':price_regex_match, 'league':item['league'],
-                                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
-                            except KeyError:
-                                pass
-        
-    def run(self):
-        """Main actions of thread.
-        First reads the API into an dictionary before parsing that dictionary for the desired items.
-        """
-        self.get_stashes()
-        self.parse_stashes()
-        self.spawner.subthreads.remove(self)
-    
-    def kill(self):
-        """Sets the flag to stop processing and terminate the thread."""
-        self.dead = True
 
 class App(tk.Tk):
 
@@ -264,7 +180,10 @@ class App(tk.Tk):
         else:
             self.print_results('Waiting for subthreads to terminate...\n\n')
         self.after(2000, self.kill_loop)
-                
+        
+    def remove_thread(self, thread):
+        """Removes the thread from known active subthreads."""
+        self.subthreads.remove(thread)
         
     def start_parsing(self):
         """Starts the automatic parsing of stash data."""
@@ -307,7 +226,7 @@ class App(tk.Tk):
                 parse_id = self.queue_parse_ids.get()
             if parse_id is not None:
                 self.print_results('Parsing ' + parse_id + '...\n\n')
-                self.subthreads.append(ParserThread(self, parse_id, self.league.get(), self.maxprice.get(),
+                self.subthreads.append(pt.ParserThread(self, parse_id, self.league.get(), self.maxprice.get(),
                                        self.minprice.get(), self.currency.get(), self.terms.get()))
                 self.parse_id.set(parse_id)
             self.after(500, self.parse_stash_data)
@@ -332,7 +251,7 @@ class App(tk.Tk):
                       + str(sale['y']) + ')'
             self.copy_results(results)
             self.print_results('Found result:\n' + results + '\n\n')
-            self.subthreads.append(BeepThread(self))
+            self.subthreads.append(bt.BeepThread(self))
         self.after(500, self.check_queue)
         
     def print_results(self, string):
