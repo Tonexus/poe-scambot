@@ -39,7 +39,6 @@ class ParserThread(threading.Thread):
                 if item['league'] == self.league:
                     for term in self.terms.split(', '):
                         if self.dead:
-                            print('dead')
                             return
                         if term.lower() in item['name'].lower():
                             price_regex_match = price_regex.match(stash['stash'])

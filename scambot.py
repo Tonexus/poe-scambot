@@ -43,6 +43,7 @@ class App(tk.Tk):
         """Initializes the app."""
         tk.Tk.__init__(self)
         self.title('PoE Stash Searcher')
+        self.iconbitmap('favicon.ico')
         self.geometry('800x375+900+200')
         self.resizable(False, False)
         self.protocol('WM_DELETE_WINDOW', self.kill)
@@ -251,9 +252,6 @@ class App(tk.Tk):
         
     def start_parsing(self):
         """Starts the automatic parsing of stash data."""
-        self.results_text.configure(state='normal')
-        self.results_text.delete(1.0, tk.END)
-        self.results_text.configure(state='disabled')
         self.button_start.configure(state='disabled')
         self.button_stop.configure(state='normal')
         self.option_parse_id.configure(state='disabled')
@@ -321,7 +319,7 @@ class App(tk.Tk):
         
     def handle_print(self, string):
         """Handles printing to the results pane."""
-        new_string = time.strftime('[%Y-%m-%d %H:%M] ') + string + '\n'
+        new_string = time.strftime('[%y-%m-%d %H:%M:%S] ') + string + '\n'
         scroll = (self.results_scroll.get()[1] == 1.0)
         
         self.results_text.configure(state='normal')
