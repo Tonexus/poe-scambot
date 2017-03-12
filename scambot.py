@@ -11,7 +11,7 @@ currency_abbreviated = ['alt', 'fuse', 'alch', 'chaos', 'gcp', 'exa', 'chrom', '
 currency_singular = ['Orb of Alteration', 'Orb of Fusing', 'Orb of Alchemy', 'Chaos Orb', 'Gemcutter\'s Prism', 'Exalted Orb', 'Chromatic Orb', 'Jeweller\'s Orb', 'Orb of Chance', 'Cartographer\'s Chisel', 'Orb of Scouring', 'Blessed Orb', 'Orb of Regret', 'Regal Orb', 'Divine Orb', 'Vaal Orb']
 currency_plural = ['Orbs of Alteration', 'Orbs of Fusing', 'Orbs of Alchemy', 'Chaos Orbs', 'Gemcutter\'s Prisms', 'Exalted Orbs', 'Chromatic Orbs', 'Jeweller\'s Orbs', 'Orbs of Chance', 'Cartographer\'s Chisels', 'Orbs of Scouring', 'Blessed Orbs', 'Orbs of Regret', 'Regal Orbs', 'Divine Orbs', 'Vaal Orbs']
 
-price_regex = re.compile('~(b/o|price) ([0-9]+) (alt|fuse|alch|chaos|gcp|exa|chrom|jew|chance|chisel|scour|blessed|regret|regal|divine|vaal)')
+# price_regex = re.compile('~(b/o|price) ([0-9]+) (alt|fuse|alch|chaos|gcp|exa|chrom|jew|chance|chisel|scour|blessed|regret|regal|divine|vaal)')
 
 stash_api = 'http://pathofexile.com/api/public-stash-tabs?id='
 
@@ -36,13 +36,16 @@ class BeepThread(threading.Thread):
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
 
-    def __init__(self, spawner, parse_id, league, terms):
+    def __init__(self, spawner, parse_id, league, maxprice, minprice, currency, terms):
         """Initializes the thread with a reference to the creator thread and specified seearch parameters."""
         threading.Thread.__init__(self)
         self.dead = False
         self.spawner = spawner
         self.parse_id = parse_id
         self.league = league
+        self.maxprice = maxprice
+        self.minprice = minprice
+        self.currency = currency
         self.terms = terms
         self.start()
         
@@ -58,6 +61,7 @@ class ParserThread(threading.Thread):
         """Parses the stash data for items matching input specifications.
         Returns matching items to the main thread via queue.
         """
+        price_regex = re.compile('~(b/o|price) ([0-9]+) (' + self.currency + ')')
         for stash in self.stashes:
             for item in stash['items']:
                 if item['league'] == self.league:
@@ -69,12 +73,13 @@ class ParserThread(threading.Thread):
                             price_regex_match = price_regex.match(stash['stash'])
                             try:
                                 price_regex_match = price_regex.match(item['note'])
+                                if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
+                                   and float(price_regex_match.group(2)) >= self.minprice:
+                                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':item['name'][28:],
+                                                                    'price':price_regex_match, 'league':item['league'],
+                                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
                             except KeyError:
                                 pass
-                            if price_regex_match:
-                                self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':item['name'][28:],
-                                                                'price':price_regex_match, 'league':item['league'],
-                                                                'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
         
     def run(self):
         """Main actions of thread.
@@ -105,7 +110,6 @@ class App(tk.Tk):
         self.start = False
         self.dead = False
         
-        self.parse_id_old = ''
         self.parse_id = tk.StringVar()
         self.league = tk.StringVar()
         self.maxprice = tk.DoubleVar()
@@ -139,10 +143,6 @@ class App(tk.Tk):
         
         self.results_text['yscrollcommand'] = self.results_scroll.set
         
-    def create_label_parse_id(self):
-        """Creates a label for the parse id field."""
-        pass
-        
     def create_option_parse_id(self):
         """Creates the parse id field.
         Parse id dictates the next chunk of stash data to parse.
@@ -152,10 +152,6 @@ class App(tk.Tk):
         
         self.option_parse_id = ttk.Entry(self, textvariable=self.parse_id, width=23)
         self.option_parse_id.grid(row=1, column=8, columnspan=2, padx=5, pady=1)
-        
-    def create_label_league(self):
-        """Creates a label for the league field."""
-        pass
         
     def create_option_league(self):
         """Creates the league field.
@@ -169,9 +165,6 @@ class App(tk.Tk):
         self.option_league['values'] = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
         self.option_league.current(0)
         
-    def create_label_maxprice(self):
-        pass
-        
     def create_option_maxprice(self):
         """Creates the max price field.
         Max price determines the maximum price of an item that the system will return.
@@ -183,9 +176,6 @@ class App(tk.Tk):
         self.option_maxprice.grid(row=5, column=8, padx=5, pady=1)
         self.option_maxprice.delete(0, tk.END)
         self.option_maxprice.insert(0, '20')
-        
-    def create_label_minprice(self):
-        pass
         
     def create_option_minprice(self):
         """Creates the min price field.
@@ -317,11 +307,12 @@ class App(tk.Tk):
                 parse_id = self.queue_parse_ids.get()
             if parse_id is not None:
                 self.print_results('Parsing ' + parse_id + '...\n\n')
-                self.subthreads.append(ParserThread(self, parse_id, self.league.get(), self.terms.get()))
+                self.subthreads.append(ParserThread(self, parse_id, self.league.get(), self.maxprice.get(),
+                                       self.minprice.get(), self.currency.get(), self.terms.get()))
                 self.parse_id.set(parse_id)
             self.after(500, self.parse_stash_data)
 
-    def parse_price(self, to_parse):
+    def make_nice_price(self, to_parse):
         """Returns the unabbreviated name of the currency."""
         price = round(float(to_parse[0]), 1)
         if price == 1.0:
@@ -333,18 +324,15 @@ class App(tk.Tk):
         """Checks whether any threads have reported results and, if so,
         copies a message to the clipboard and reports them to the results pane.
         """
-        if not self.queue_results.empty():
+        while not self.queue_results.empty():
             sale = self.queue_results.get()
-            if sale['price'].group(3) == self.currency.get() \
-               and float(sale['price'].group(2)) <= self.maxprice.get() \
-               and float(sale['price'].group(2)) >= self.minprice.get():
-                results = '@' + sale['name'] + ' Hi, I would like to buy your ' + sale['item'] + ' listed for ' \
-                          + self.parse_price(sale['price'].group(2, 3)) + ' in ' + sale['league'] \
-                          + ' (stash tab \"' + sale['stash'] + '\"; position: left ' + str(sale['x']) + ', top ' \
-                          + str(sale['y']) + ')'
-                self.copy_results(results)
-                self.print_results('Found result:\n' + results + '\n\n')
-                self.subthreads.append(BeepThread(self))
+            results = '@' + sale['name'] + ' Hi, I would like to buy your ' + sale['item'] + ' listed for ' \
+                      + self.make_nice_price(sale['price'].group(2, 3)) + ' in ' + sale['league'] \
+                      + ' (stash tab \"' + sale['stash'] + '\"; position: left ' + str(sale['x']) + ', top ' \
+                      + str(sale['y']) + ')'
+            self.copy_results(results)
+            self.print_results('Found result:\n' + results + '\n\n')
+            self.subthreads.append(BeepThread(self))
         self.after(500, self.check_queue)
         
     def print_results(self, string):
