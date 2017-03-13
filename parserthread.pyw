@@ -8,7 +8,7 @@ stash_api = 'http://pathofexile.com/api/public-stash-tabs?id='
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
 
-    def __init__(self, spawner, parse_id, league, maxprice, minprice, currency, terms):
+    def __init__(self, spawner, parse_id, league, maxprice, minprice, currency, regex):
         """Initializes the thread with a reference to the creator thread and specified seearch parameters."""
         threading.Thread.__init__(self)
         self.dead = False
@@ -18,7 +18,7 @@ class ParserThread(threading.Thread):
         self.maxprice = maxprice
         self.minprice = minprice
         self.currency = currency
-        self.terms = terms
+        self.regex = re.compile(regex, re.IGNORECASE)
         self.start()
         
     def get_stashes(self):
@@ -36,22 +36,22 @@ class ParserThread(threading.Thread):
         price_regex = re.compile('~(b/o|price) ([0-9]+) (' + self.currency + ')')
         for stash in self.stashes:
             for item in stash['items']:
+                if self.dead:
+                    return
                 if item['league'] == self.league:
                     full_name = item['typeLine'] if item['name'] == '' else item['name'][28:] + ' ' + item['typeLine']
-                    for term in self.terms.split(', '):
-                        if self.dead:
-                            return
-                        if term.lower() in full_name.lower():
-                            price_regex_match = price_regex.match(stash['stash'])
-                            try:
-                                price_regex_match = price_regex.match(item['note'])
-                                if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
-                                   and float(price_regex_match.group(2)) >= self.minprice:
-                                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':full_name,
-                                                                    'price':price_regex_match, 'league':item['league'],
-                                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
-                            except KeyError:
-                                pass
+                    full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
+                    if self.regex.search(full_text):
+                        price_regex_match = price_regex.match(stash['stash'])
+                        try:
+                            price_regex_match = price_regex.match(item['note'])
+                            if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
+                               and float(price_regex_match.group(2)) >= self.minprice:
+                                self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':full_name,
+                                                                'price':price_regex_match, 'league':item['league'],
+                                                                'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
+                        except KeyError:
+                            pass
         
     def run(self):
         """Main actions of thread.

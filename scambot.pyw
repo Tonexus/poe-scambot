@@ -59,7 +59,7 @@ class App(tk.Tk):
         self.maxprice = tk.DoubleVar()
         self.minprice = tk.DoubleVar()
         self.currency = tk.StringVar()
-        self.terms = tk.StringVar()
+        self.regex = tk.StringVar()
         
         self.create_widgets()
         
@@ -74,7 +74,7 @@ class App(tk.Tk):
         self.create_option_maxprice()
         self.create_option_currency()
         self.create_option_minprice()
-        self.create_option_terms()
+        self.create_option_regex()
         self.create_button_start()
         self.create_button_stop()
         
@@ -193,16 +193,17 @@ class App(tk.Tk):
         self.option_currency[1].grid(row=5, column=9, padx=5, pady=1)
         self.option_currency[1]['values'] = currency_abbreviated
         
-    def create_option_terms(self):
-        """Creates the terms field. Terms are not case sensitice and
-        by default are delineated by a space and a comma. Terms are
-        searched within the item name.
+    def create_option_regex(self):
+        """Creates the regex field. Regex is not case sensitice and
+        by default are delineated by a space and a comma. Regex is
+        searched within the item text (name, implicit mods, and
+        explicit mods).
         """
-        self.lable_terms = ttk.Label(self, text='Search Terms')
-        self.lable_terms.grid(row=15, column=0, padx=5, pady=5)
+        self.lable_regex = ttk.Label(self, text='Search Regex')
+        self.lable_regex.grid(row=15, column=0, padx=5, pady=5)
         
-        self.option_terms = ttk.Entry(self, textvariable=self.terms, width=75)
-        self.option_terms.grid(row=15, column=1, columnspan=7, padx=5, pady=5, sticky=tk.W)
+        self.option_regex = ttk.Entry(self, textvariable=self.regex, width=75)
+        self.option_regex.grid(row=15, column=1, columnspan=7, padx=5, pady=5, sticky=tk.W)
         
     def create_button_start(self):
         """Creates the start, which begins the automatic parsing of
@@ -232,7 +233,7 @@ class App(tk.Tk):
         self.option_minprice.configure(state='disabled')
         self.option_currency[0].configure(state='disabled')
         self.option_currency[1].configure(state='disabled')
-        self.option_terms.configure(state='disabled')
+        self.option_regex.configure(state='disabled')
         for thread in self.subthreads:
             thread.kill()
         self.kill_loop()
@@ -259,7 +260,7 @@ class App(tk.Tk):
         self.option_minprice.configure(state='disabled')
         self.option_currency[0].configure(state='disabled')
         self.option_currency[1].configure(state='disabled')
-        self.option_terms.configure(state='disabled')
+        self.option_regex.configure(state='disabled')
         self.handle_print('Starting search...')
         self.start = True
         # if self.get_parse_id:
@@ -279,7 +280,7 @@ class App(tk.Tk):
         self.option_minprice.configure(state='normal')
         self.option_currency[0].configure(state='readonly')
         self.option_currency[1].configure(state='readonly')
-        self.option_terms.configure(state='normal')
+        self.option_regex.configure(state='normal')
         self.handle_print('Stopping search...')
         self.start = False
         for thread in self.subthreads:
@@ -296,7 +297,7 @@ class App(tk.Tk):
             if parse_id is not None:
                 self.handle_print('Parsing ' + parse_id + '...')
                 self.subthreads.append(pt.ParserThread(self, parse_id, self.league.get(), self.maxprice.get(),
-                                       self.minprice.get(), self.currency.get(), self.terms.get()))
+                                       self.minprice.get(), self.currency.get(), self.regex.get()))
                 # self.parse_id.set(parse_id)
             self.after(500, self.parse_stash_data)
 
