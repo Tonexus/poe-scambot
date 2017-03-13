@@ -1,10 +1,10 @@
 import time
 import queue
 import configparser
-import urllib.request
-import json
 import tkinter as tk
 from tkinter import ttk
+
+import requests
 
 import parserthread as pt
 import beepthread as bt
@@ -264,7 +264,7 @@ class App(tk.Tk):
         self.handle_print('Starting search...')
         self.start = True
         if self.get_parse_id:
-            self.parse_id.set(json.loads(urllib.request.urlopen(parse_id_api).read())['nextChangeId'])
+            self.parse_id.set(requests.get(parse_id_api).json()['nextChangeId'])
         self.queue_parse_ids.put(self.parse_id.get())
         self.parse_stash_data()
         

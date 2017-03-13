@@ -1,7 +1,7 @@
-import urllib.request
-import json
 import re
 import threading
+
+import requests
 
 stash_api = 'http://pathofexile.com/api/public-stash-tabs?id='
 
@@ -25,7 +25,7 @@ class ParserThread(threading.Thread):
         """Reads the JSON data from the stash API into a dictionary.
         Also returns the id of the next chunk of data to the main thread via queue.
         """
-        stash_data = json.loads(urllib.request.urlopen(stash_api + self.parse_id).read())
+        stash_data = requests.get(stash_api + self.parse_id).json()
         self.spawner.queue_parse_ids.put(stash_data['next_change_id'])
         self.stashes = stash_data['stashes']
     

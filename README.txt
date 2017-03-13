@@ -1,6 +1,7 @@
 Name: PoE ScamBot
 Author: Tony Lau
-Requirements: Windows, Python 3.6
+System Requirements: Windows, Python 3.6
+Dependencies: requests
 
 PoE ScamBot is tool for maintaining a live search of the Path of
 Exile stash tab API. Unlike some other indexers, such as poe.trade or
