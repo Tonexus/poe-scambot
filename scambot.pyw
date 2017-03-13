@@ -43,9 +43,9 @@ class App(tk.Tk):
         """Initializes the app."""
         tk.Tk.__init__(self)
         self.title('PoE ScamBot')
-        self.iconbitmap('favicon.ico')
         self.geometry('800x375+900+200')
         self.resizable(False, False)
+        self.iconbitmap('favicon.ico')
         self.protocol('WM_DELETE_WINDOW', self.kill)
         
         self.subthreads = []

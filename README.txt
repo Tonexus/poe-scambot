@@ -11,8 +11,7 @@ searching for items with specific names, such as uniques, maps, and
 currency, and not magic or rare items.
 
 Usage:
-1. Run scambot.py (if you don't like the console window in the
-   background, rename scambot.py to scambot.pyw, and run that)
+1. Run scambot.pyw
 
 2. Under the default settings, simply input the search terms
    (separated by a comma and a space) and the desired league, max
