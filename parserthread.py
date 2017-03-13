@@ -37,16 +37,17 @@ class ParserThread(threading.Thread):
         for stash in self.stashes:
             for item in stash['items']:
                 if item['league'] == self.league:
+                    full_name = item['typeLine'] if item['name'] == '' else item['name'][28:] + ' ' + item['typeLine']
                     for term in self.terms.split(', '):
                         if self.dead:
                             return
-                        if term.lower() in item['name'].lower():
+                        if term.lower() in full_name.lower():
                             price_regex_match = price_regex.match(stash['stash'])
                             try:
                                 price_regex_match = price_regex.match(item['note'])
                                 if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
                                    and float(price_regex_match.group(2)) >= self.minprice:
-                                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':item['name'][28:],
+                                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':full_name,
                                                                     'price':price_regex_match, 'league':item['league'],
                                                                     'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
                             except KeyError:

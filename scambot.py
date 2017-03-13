@@ -42,7 +42,7 @@ class App(tk.Tk):
     def __init__(self):
         """Initializes the app."""
         tk.Tk.__init__(self)
-        self.title('PoE Stash Searcher')
+        self.title('PoE ScamBot')
         self.iconbitmap('favicon.ico')
         self.geometry('800x375+900+200')
         self.resizable(False, False)

@@ -1,4 +1,14 @@
+Name: PoE ScamBot
+Author: Tony Lau
 Requirements: Windows, Python 3.6
+
+PoE ScamBot is tool for maintaining a live search of the Path of
+Exile stash tab API. Unlike some other indexers, such as poe.trade or
+poe.ninja, ScamBot does not track historical data and is only a
+lightweight parser. Thus, an item may show up multiple times if a
+player modified other items in the stash. ScamBot is intended for
+searching for items with specific names, such as uniques, maps, and
+currency, and not magic or rare items.
 
 Usage:
 1. Run scambot.py (if you don't like the console window in the
