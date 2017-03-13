@@ -151,10 +151,10 @@ class App(tk.Tk):
         that the items will be searched in.
         """
         self.label_league = ttk.Label(self, text='League')
-        self.label_league.grid(row=2, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        self.label_league.grid(row=0, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
         
         self.option_league = ttk.Combobox(self, textvariable=self.league, state='readonly', width=20)
-        self.option_league.grid(row=3, column=8, columnspan=2, padx=5, pady=1)
+        self.option_league.grid(row=1, column=8, columnspan=2, padx=5, pady=1)
         self.option_league['values'] = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
         
     def create_option_maxprice(self):
@@ -162,10 +162,10 @@ class App(tk.Tk):
         maximum price of an item that the system will return.
         """
         self.label_maxprice = ttk.Label(self, text='Maximum Price')
-        self.label_maxprice.grid(row=4, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        self.label_maxprice.grid(row=2, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
         
         self.option_maxprice = ttk.Entry(self, textvariable=self.maxprice, width=10)
-        self.option_maxprice.grid(row=5, column=8, padx=5, pady=1)
+        self.option_maxprice.grid(row=3, column=8, padx=5, pady=1)
         self.option_maxprice.delete(0, tk.END)
         
     def create_option_minprice(self):
@@ -173,10 +173,10 @@ class App(tk.Tk):
         minimum price of an item that the system will return.
         """
         self.label_minprice = ttk.Label(self, text='Minimum Price')
-        self.label_minprice.grid(row=6, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        self.label_minprice.grid(row=4, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
         
         self.option_minprice = ttk.Entry(self, textvariable=self.minprice, width=10)
-        self.option_minprice.grid(row=7, column=8, padx=5, pady=1)
+        self.option_minprice.grid(row=5, column=8, padx=5, pady=1)
         self.option_minprice.delete(0, tk.END)
         
     def create_option_currency(self):
@@ -186,11 +186,11 @@ class App(tk.Tk):
         """
         self.option_currency = []
         self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=7))
-        self.option_currency[0].grid(row=5, column=9, padx=5, pady=1)
+        self.option_currency[0].grid(row=3, column=9, padx=5, pady=1)
         self.option_currency[0]['values'] = currency_abbreviated
         
         self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=7))
-        self.option_currency[1].grid(row=7, column=9, padx=5, pady=1)
+        self.option_currency[1].grid(row=5, column=9, padx=5, pady=1)
         self.option_currency[1]['values'] = currency_abbreviated
         
     def create_option_terms(self):
