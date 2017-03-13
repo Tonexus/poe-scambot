@@ -274,11 +274,11 @@ class App(tk.Tk):
         self.button_stop.configure(state='disabled')
         if not self.get_parse_id:
             self.option_parse_id.configure(state='normal')
-        self.option_league.configure(state='normal')
+        self.option_league.configure(state='readonly')
         self.option_maxprice.configure(state='normal')
         self.option_minprice.configure(state='normal')
-        self.option_currency[0].configure(state='normal')
-        self.option_currency[1].configure(state='normal')
+        self.option_currency[0].configure(state='readonly')
+        self.option_currency[1].configure(state='readonly')
         self.option_terms.configure(state='normal')
         self.handle_print('Stopping search...')
         self.start = False
@@ -340,7 +340,7 @@ class App(tk.Tk):
         
     def handle_result(self, result):
         """Handles one result from the queue."""
-        string = '@ {name} Hi, I would like you buy you {item} ' \
+        string = '@{name} Hi, I would like you buy you {item} ' \
                  'listed for {price} in {league} ' \
                  '(stash tab {stash}; position: left {x}, top {y})'
         string = string.format(name=result['name'], item=result['item'],
