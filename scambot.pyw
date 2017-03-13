@@ -54,7 +54,7 @@ class App(tk.Tk):
         self.start = False
         self.dead = False
         
-        self.parse_id = tk.StringVar()
+        # self.parse_id = tk.StringVar()
         self.league = tk.StringVar()
         self.maxprice = tk.DoubleVar()
         self.minprice = tk.DoubleVar()
@@ -70,7 +70,6 @@ class App(tk.Tk):
     def create_widgets(self):
         """Creates the app\'s widgets."""
         self.create_search_results()
-        self.create_option_parse_id()
         self.create_option_league()
         self.create_option_maxprice()
         self.create_option_currency()
@@ -99,7 +98,7 @@ class App(tk.Tk):
         config.set('output', 'log', 'n')
         config.set('output', 'log_path', '')
         
-        config.set('input', 'get_parse_id', 'y')
+        # config.set('input', 'get_parse_id', 'y')
         
         try:
             with open(fn, 'r') as cfg_file:
@@ -119,9 +118,9 @@ class App(tk.Tk):
         if self.log:
             self.log_path = config.get('output', 'log_path')
             
-        self.get_parse_id = True if config.get('input', 'get_parse_id') == 'y' else False
-        if self.get_parse_id:
-            self.option_parse_id.configure(state='disabled')
+        # self.get_parse_id = True if config.get('input', 'get_parse_id') == 'y' else False
+        # if self.get_parse_id:
+            # self.option_parse_id.configure(state='disabled')
         
     def create_search_results(self):
         """Creates the search results pane."""
@@ -137,15 +136,15 @@ class App(tk.Tk):
         
         self.results_text['yscrollcommand'] = self.results_scroll.set
         
-    def create_option_parse_id(self):
-        """Creates the parse id field. Parse id determines the next
-        chunk of stash data to parse.
-        """
-        self.label_parse_id = ttk.Label(self, text='Parse ID')
-        self.label_parse_id.grid(row=0, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
+    # def create_option_parse_id(self):
+        # """Creates the parse id field. Parse id determines the next
+        # chunk of stash data to parse.
+        # """
+        # self.label_parse_id = ttk.Label(self, text='Parse ID')
+        # self.label_parse_id.grid(row=0, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
         
-        self.option_parse_id = ttk.Entry(self, textvariable=self.parse_id, width=23)
-        self.option_parse_id.grid(row=1, column=8, columnspan=2, padx=5, pady=1)
+        # self.option_parse_id = ttk.Entry(self, textvariable=self.parse_id, width=23)
+        # self.option_parse_id.grid(row=1, column=8, columnspan=2, padx=5, pady=1)
         
     def create_option_league(self):
         """Creates the league field. League determines the league
@@ -227,7 +226,7 @@ class App(tk.Tk):
         self.dead = True
         self.button_start.configure(state='disabled')
         self.button_stop.configure(state='disabled')
-        self.option_parse_id.configure(state='disabled')
+        # self.option_parse_id.configure(state='disabled')
         self.option_league.configure(state='disabled')
         self.option_maxprice.configure(state='disabled')
         self.option_minprice.configure(state='disabled')
@@ -254,7 +253,7 @@ class App(tk.Tk):
         """Starts the automatic parsing of stash data."""
         self.button_start.configure(state='disabled')
         self.button_stop.configure(state='normal')
-        self.option_parse_id.configure(state='disabled')
+        # self.option_parse_id.configure(state='disabled')
         self.option_league.configure(state='disabled')
         self.option_maxprice.configure(state='disabled')
         self.option_minprice.configure(state='disabled')
@@ -263,17 +262,18 @@ class App(tk.Tk):
         self.option_terms.configure(state='disabled')
         self.handle_print('Starting search...')
         self.start = True
-        if self.get_parse_id:
-            self.parse_id.set(requests.get(parse_id_api).json()['nextChangeId'])
-        self.queue_parse_ids.put(self.parse_id.get())
+        # if self.get_parse_id:
+            # self.parse_id.set(requests.get(parse_id_api).json()['nextChangeId'])
+        # self.queue_parse_ids.put(self.parse_id.get())
+        self.queue_parse_ids.put(requests.get(parse_id_api).json()['nextChangeId'])
         self.parse_stash_data()
         
     def stop_parsing(self):
         """Stops the automatic parsing of stash data."""
         self.button_start.configure(state='normal')
         self.button_stop.configure(state='disabled')
-        if not self.get_parse_id:
-            self.option_parse_id.configure(state='normal')
+        # if not self.get_parse_id:
+            # self.option_parse_id.configure(state='normal')
         self.option_league.configure(state='readonly')
         self.option_maxprice.configure(state='normal')
         self.option_minprice.configure(state='normal')
@@ -297,7 +297,7 @@ class App(tk.Tk):
                 self.handle_print('Parsing ' + parse_id + '...')
                 self.subthreads.append(pt.ParserThread(self, parse_id, self.league.get(), self.maxprice.get(),
                                        self.minprice.get(), self.currency.get(), self.terms.get()))
-                self.parse_id.set(parse_id)
+                # self.parse_id.set(parse_id)
             self.after(500, self.parse_stash_data)
 
     def make_nice_price(self, to_parse):
