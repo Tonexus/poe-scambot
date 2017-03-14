@@ -9,7 +9,7 @@ localization = re.compile('<<.*>>')
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
 
-    def __init__(self, spawner, parse_id, league, maxprice, minprice, currency, regex):
+    def __init__(self, spawner, parse_id, league, maxprice, minprice, currency, sockets, links, corrupted, regex):
         """Initializes the thread with a reference to the creator thread and specified seearch parameters."""
         threading.Thread.__init__(self)
         self.dead = False
@@ -18,7 +18,10 @@ class ParserThread(threading.Thread):
         self.league = league
         self.maxprice = maxprice
         self.minprice = minprice
+        self.sockets = sockets
+        self.links = links
         self.price_regex = re.compile('~(b/o|price) ([0-9]+) (' + currency + ')')
+        self.corrupted = corrupted
         self.regex = re.compile(regex, re.IGNORECASE)
         self.start()
         
@@ -48,10 +51,19 @@ class ParserThread(threading.Thread):
         """Checks whether an item meets the search conditions."""
         if not item['league'] == self.league:
             return None
+            
+        if not self.corrupted and item['corrupted'] == 'True':
+            return None
+            
+            
         # if not check links
         
         full_name = localization.sub('', ' '.join(filter(None, [item['name'], item['typeLine']])))
-        full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
+        full_text = ' '.join([full_name]
+                             + item.get('implicitMods', [])
+                             + item.get('enchantMods', [])
+                             + item.get('explicitMods', [])
+                             + item.get('craftedMods', []))
         
         if not self.regex.search(full_text):
             return None

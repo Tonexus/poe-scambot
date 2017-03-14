@@ -9,12 +9,12 @@ import requests
 import parserthread as pt
 import beepthread as bt
 
-currency_abbreviated = ['alt', 'fuse', 'alch', 'chaos', 'gcp', 'exa',
+CURRENCY_ABBREVIATED = ['alt', 'fuse', 'alch', 'chaos', 'gcp', 'exa',
                         'chrom', 'jew', 'chance', 'chisel', 'scour',
                         'blessed', 'regret', 'regal', 'divine',
                         'vaal']
 
-currency_singular = ['Orb of Alteration', 'Orb of Fusing',
+CURRENCY_SINGULAR = ['Orb of Alteration', 'Orb of Fusing',
                      'Orb of Alchemy', 'Chaos Orb',
                      'Gemcutter\'s Prism', 'Exalted Orb',
                      'Chromatic Orb', 'Jeweller\'s Orb',
@@ -23,7 +23,7 @@ currency_singular = ['Orb of Alteration', 'Orb of Fusing',
                      'Orb of Regret', 'Regal Orb', 'Divine Orb',
                      'Vaal Orb']
 
-currency_plural = ['Orbs of Alteration', 'Orbs of Fusing',
+CURRENCY_PLURAL = ['Orbs of Alteration', 'Orbs of Fusing',
                    'Orbs of Alchemy', 'Chaos Orbs',
                    'Gemcutter\'s Prisms', 'Exalted Orbs',
                    'Chromatic Orbs', 'Jeweller\'s Orbs',
@@ -32,9 +32,16 @@ currency_plural = ['Orbs of Alteration', 'Orbs of Fusing',
                    'Orbs of Regret', 'Regal Orbs', 'Divine Orbs',
                    'Vaal Orbs']
 
-current_leagues = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
+LEAGUES = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
 
-parse_id_api = 'http://api.poe.ninja/api/Data/GetStats'
+NINJA_API = 'http://api.poe.ninja/api/Data/GetStats'
+
+DEFAULT_LEAGUE = LEAGUES[0]
+DEFAULT_MINPRICE = 1.0
+DEFAULT_MAXPRICE = 20.0
+DEFAULT_CURRENCY = CURRENCY_ABBREVIATED[3]
+DEFAULT_SOCKETS = 0
+DEFAULT_LINKS = 0
 
 class App(tk.Tk):
     """App that centralizes all of the live search functionality with
@@ -66,11 +73,11 @@ class App(tk.Tk):
             self.rowconfigure(i, weight=1, minsize=35)
         
         self.league = tk.StringVar()
-        self.maxprice = tk.DoubleVar()
-        self.minprice = tk.DoubleVar()
+        self.maxprice = tk.StringVar()
+        self.minprice = tk.StringVar()
         self.currency = tk.StringVar()
-        self.sockets = tk.IntVar()
-        self.links = tk.IntVar()
+        self.sockets = tk.StringVar()
+        self.links = tk.StringVar()
         self.corrupted = tk.BooleanVar()
         self.regex = tk.StringVar()
         
@@ -102,12 +109,12 @@ class App(tk.Tk):
         config = configparser.ConfigParser()
         config['DEFAULT'] = {}
         
-        config.set('DEFAULT', 'league', 'Legacy')
-        config.set('DEFAULT', 'maxprice', '20')
-        config.set('DEFAULT', 'minprice', '1')
-        config.set('DEFAULT', 'currency', 'chaos')
-        config.set('DEFAULT', 'sockets', '0')
-        config.set('DEFAULT', 'links', '0')
+        config.set('DEFAULT', 'league', DEFAULT_LEAGUE)
+        config.set('DEFAULT', 'maxprice', str(DEFAULT_MAXPRICE))
+        config.set('DEFAULT', 'minprice', str(DEFAULT_MINPRICE))
+        config.set('DEFAULT', 'currency', DEFAULT_CURRENCY)
+        config.set('DEFAULT', 'sockets', str(DEFAULT_SOCKETS))
+        config.set('DEFAULT', 'links', str(DEFAULT_LINKS))
         config.set('DEFAULT', 'corrupted', 'y')
         
         config.set('DEFAULT', 'max_console_size', '1000')
@@ -121,23 +128,23 @@ class App(tk.Tk):
         except FileNotFoundError:
             pass
         
-        if config.get('defaults', 'league') in current_leagues:
+        if config.get('defaults', 'league') in LEAGUES:
             self.league.set(config.get('defaults', 'league'))
         else:
             self.league.set(config.get('DEFAULT', 'league'))
-        self.maxprice.set(float(config.get('defaults', 'maxprice')))
-        self.minprice.set(float(config.get('defaults', 'minprice')))
-        if config.get('defaults', 'currency') in currency_abbreviated:
+        self.maxprice.set(config.get('defaults', 'maxprice'))
+        self.minprice.set(config.get('defaults', 'minprice'))
+        if config.get('defaults', 'currency') in CURRENCY_ABBREVIATED:
             self.currency.set(config.get('defaults', 'currency'))
         else:
             self.currency.set(config.get('DEFAULT', 'currency'))
-        self.sockets.set(int(config.get('defaults', 'sockets')))
-        self.links.set(int(config.get('defaults', 'links')))
+        self.sockets.set(config.get('defaults', 'sockets'))
+        self.links.set(config.get('defaults', 'links'))
         self.corrupted.set(config.get('defaults', 'corrupted') == 'y')
         
         self.max_console_size = int(config.get('output', 'max_console_size'))
-        self.clipboard = True if config.get('output', 'clipboard') == 'y' else False
-        self.log = True if config.get('output', 'log') == 'y' else False
+        self.clipboard = config.get('output', 'clipboard') == 'y'
+        self.log = config.get('output', 'log') == 'y'
         if self.log:
             self.log_path = config.get('output', 'log_path')
         
@@ -165,7 +172,7 @@ class App(tk.Tk):
         
         self.option_league = ttk.Combobox(self, textvariable=self.league, state='readonly', width=0)
         self.option_league.grid(row=1, column=self.results_width, columnspan=2, padx=5, pady=1, sticky='ew')
-        self.option_league['values'] = current_leagues
+        self.option_league['values'] = LEAGUES
         
     def create_option_maxprice(self):
         """Creates the max price field. Max price determines the
@@ -195,11 +202,11 @@ class App(tk.Tk):
         self.option_currency = []
         self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=0))
         self.option_currency[0].grid(row=3, column=self.results_width + 1, padx=5, pady=1, sticky='ew')
-        self.option_currency[0]['values'] = currency_abbreviated
+        self.option_currency[0]['values'] = CURRENCY_ABBREVIATED
         
         self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=0))
         self.option_currency[1].grid(row=5, column=self.results_width + 1, padx=5, pady=1, sticky='ew')
-        self.option_currency[1]['values'] = currency_abbreviated
+        self.option_currency[1]['values'] = CURRENCY_ABBREVIATED
         
     def create_option_sockets(self):
         """Creates the sockets field. Sockets determines the minimum
@@ -223,7 +230,7 @@ class App(tk.Tk):
         
     def create_option_corrupted(self):
         """Creates the corrupted field. Corrupted determines whether
-        items can be corrupted.
+        items that have been corrupted are included.
         """
         self.option_corrupted = ttk.Checkbutton(self, text='Allow Corrupted', variable=self.corrupted)
         self.option_corrupted.grid(row=8, column=self.results_width, columnspan=2, padx=5, pady=1, sticky='w')
@@ -304,7 +311,7 @@ class App(tk.Tk):
         self.option_regex.configure(state='disabled')
         self.handle_print('Starting search...')
         self.start = True
-        self.queue_parse_ids.put(requests.get(parse_id_api).json()['nextChangeId'])
+        self.queue_parse_ids.put(requests.get(NINJA_API).json()['nextChangeId'])
         self.parse_stash_data()
         
     def stop_parsing(self):
@@ -336,8 +343,25 @@ class App(tk.Tk):
                 parse_id = self.queue_parse_ids.get()
             if parse_id:
                 self.handle_print('Parsing ' + parse_id + '...')
-                self.subthreads.append(pt.ParserThread(self, parse_id, self.league.get(), self.maxprice.get(),
-                                       self.minprice.get(), self.currency.get(), self.regex.get()))
+                try:
+                    maxprice = float(self.maxprice.get())
+                except ValueError:
+                    maxprice = DEFAULT_MAXPRICE
+                try:
+                    minprice = float(self.minprice.get())
+                except ValueError:
+                    minprice = DEFAULT_MINPRICE
+                try:
+                    sockets = int(self.sockets.get())
+                except ValueError:
+                    sockets = DEFAULT_SOCKETS
+                try:
+                    links = DEFAULT_LINKS
+                except ValueError:
+                    sockets = float(self.config.get('DEFAULT', 'links'))
+                self.subthreads.append(pt.ParserThread(self, parse_id, self.league.get(), maxprice,
+                                       minprice, self.currency.get(), sockets,
+                                       links, self.corrupted.get(), self.regex.get()))
                 self.after(750, self.parse_stash_data)
             else:
                 self.after(50, self.parse_stash_data)
@@ -346,9 +370,9 @@ class App(tk.Tk):
         """Returns the unabbreviated name of the currency."""
         price = round(float(to_parse[0]), 1)
         if price == 1.0:
-            return str(price) + ' ' + currency_singular[currency_abbreviated.index(to_parse[1])]
+            return str(price) + ' ' + CURRENCY_SINGULAR[CURRENCY_ABBREVIATED.index(to_parse[1])]
         else:
-            return str(price) + ' ' + currency_plural[currency_abbreviated.index(to_parse[1])]
+            return str(price) + ' ' + CURRENCY_PLURAL[CURRENCY_ABBREVIATED.index(to_parse[1])]
 
     def check_queue(self):
         """Checks whether any threads have reported results and, if
