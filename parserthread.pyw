@@ -45,13 +45,13 @@ class ParserThread(threading.Thread):
                         price_regex_match = price_regex.match(stash['stash'])
                         try:
                             price_regex_match = price_regex.match(item['note'])
-                            if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
-                               and float(price_regex_match.group(2)) >= self.minprice:
-                                self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':full_name,
-                                                                'price':price_regex_match, 'league':item['league'],
-                                                                'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
                         except KeyError:
                             pass
+                        if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
+                           and float(price_regex_match.group(2)) >= self.minprice:
+                            self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':full_name,
+                                                            'price':price_regex_match, 'league':item['league'],
+                                                            'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
         
     def run(self):
         """Main actions of thread.
