@@ -32,6 +32,8 @@ currency_plural = ['Orbs of Alteration', 'Orbs of Fusing',
                    'Orbs of Regret', 'Regal Orbs', 'Divine Orbs',
                    'Vaal Orbs']
 
+current_leagues = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
+
 parse_id_api = 'http://api.poe.ninja/api/Data/GetStats'
 
 class App(tk.Tk):
@@ -79,34 +81,36 @@ class App(tk.Tk):
         self.bind('<Return>', lambda event: self.start_parsing())
         
     def parse_config(self):
-        """Parses the config file \'scambot.cfg\' or creates a
-        default one if it does not exist.
+        """Parses the config file \'scambot.cfg\'.
         """
         fn = 'scambot.cfg'
         config = configparser.ConfigParser()
-        config['defaults'] = {}
-        config['output'] = {}
-        config['input'] = {}
+        config['DEFAULT'] = {}
         
-        config.set('defaults', 'league', 'Legacy')
-        config.set('defaults', 'currency', 'chaos')
-        config.set('defaults', 'maxprice', '20')
-        config.set('defaults', 'minprice', '1')
+        config.set('DEFAULT', 'league', 'Legacy')
+        config.set('DEFAULT', 'currency', 'chaos')
+        config.set('DEFAULT', 'maxprice', '20')
+        config.set('DEFAULT', 'minprice', '1')
         
-        config.set('output', 'max_console_size', '1000')
-        config.set('output', 'clipboard', 'y')
-        config.set('output', 'log', 'n')
-        config.set('output', 'log_path', '')
+        config.set('DEFAULT', 'max_console_size', '1000')
+        config.set('DEFAULT', 'clipboard', 'y')
+        config.set('DEFAULT', 'log', 'n')
+        config.set('DEFAULT', 'log_path', '')
         
         try:
             with open(fn, 'r') as cfg_file:
                 config.read_file(cfg_file)
         except FileNotFoundError:
-            with open(fn, 'w') as cfg_file:
-                config.write(cfg_file)
+            pass
         
-        self.league.set(config.get('defaults', 'league'))
-        self.currency.set(config.get('defaults', 'currency'))
+        if config.get('defaults', 'league') in current_leagues:
+            self.league.set(config.get('defaults', 'league'))
+        else:
+            self.league.set(config.get('DEFAULT', 'league'))
+        if config.get('defaults', 'currency') in currency_abbreviated:
+            self.currency.set(config.get('defaults', 'currency'))
+        else:
+            self.currency.set(config.get('DEFAULT', 'currency'))
         self.maxprice.set(float(config.get('defaults', 'maxprice')))
         self.minprice.set(float(config.get('defaults', 'minprice')))
         
@@ -139,7 +143,7 @@ class App(tk.Tk):
         
         self.option_league = ttk.Combobox(self, textvariable=self.league, state='readonly', width=20)
         self.option_league.grid(row=1, column=8, columnspan=2, padx=5, pady=1)
-        self.option_league['values'] = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
+        self.option_league['values'] = current_leagues
         
     def create_option_maxprice(self):
         """Creates the max price field. Max price determines the
