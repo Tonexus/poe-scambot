@@ -39,7 +39,9 @@ class ParserThread(threading.Thread):
                 if self.dead:
                     return
                 if item['league'] == self.league:
-                    full_name = item['typeLine'] if item['name'] == '' else item['name'][28:] + ' ' + item['typeLine']
+                    full_name = ' '.join(filter(None, [item['name'], item['typeLine']]))
+                    if full_name.startswith('<<set:MS>><<set:M>><<set:S>>'):
+                        full_name = full_name[28:]
                     full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
                     if self.regex.search(full_text):
                         price_regex_match = price_regex.match(stash['stash'])
@@ -49,6 +51,9 @@ class ParserThread(threading.Thread):
                             pass
                         if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
                            and float(price_regex_match.group(2)) >= self.minprice:
+                            print('name: ' + item['name'])
+                            print('type_line: ' + item['typeLine'])
+                            print('full_name: ' + full_name)
                             self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':full_name,
                                                             'price':price_regex_match, 'league':item['league'],
                                                             'stash':stash['stash'], 'x':item['x'], 'y':item['y']})

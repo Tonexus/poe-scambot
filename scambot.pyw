@@ -204,6 +204,7 @@ class App(tk.Tk):
         
         self.option_regex = ttk.Entry(self, textvariable=self.regex, width=75)
         self.option_regex.grid(row=15, column=1, columnspan=7, padx=5, pady=5, sticky=tk.W)
+        self.option_regex.focus_set()
         
     def create_button_start(self):
         """Creates the start, which begins the automatic parsing of
@@ -341,7 +342,7 @@ class App(tk.Tk):
         
     def handle_result(self, result):
         """Handles one result from the queue."""
-        string = '@{name} Hi, I would like you buy you {item} ' \
+        string = '@{name} Hi, I would like to buy your {item} ' \
                  'listed for {price} in {league} ' \
                  '(stash tab {stash}; position: left {x}, top {y})'
         string = string.format(name=result['name'], item=result['item'],
