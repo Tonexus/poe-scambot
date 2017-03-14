@@ -4,6 +4,7 @@ import threading
 import requests
 
 stash_api = 'http://pathofexile.com/api/public-stash-tabs?id='
+localization = re.compile('<<.*>>')
 
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
@@ -17,6 +18,7 @@ class ParserThread(threading.Thread):
         self.league = league
         self.maxprice = maxprice
         self.minprice = minprice
+        self.price_regex = re.compile('~(b/o|price) ([0-9]+) (' + currency + ')')
         self.currency = currency
         self.regex = re.compile(regex, re.IGNORECASE)
         self.start()
@@ -29,34 +31,44 @@ class ParserThread(threading.Thread):
         self.spawner.queue_parse_ids.put(stash_data['next_change_id'])
         self.stashes = stash_data['stashes']
     
+    def check_item(self, item, stash):
+        if not item['league'] == self.league:
+            return None
+        # if not check links
+        
+        full_name = localization.sub('', ' '.join(filter(None, [item['name'], item['typeLine']])))
+        full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
+        
+        if not self.regex.search(full_text):
+            return None
+            
+        price_regex_match = self.price_regex.match(stash)
+        try:
+            price_regex_match = self.price_regex.match(item['note'])
+        except KeyError:
+            pass
+            
+        if not price_regex_match:
+            return None
+            
+        if float(price_regex_match.group(2)) > self.maxprice or float(price_regex_match.group(2)) < self.minprice:
+            return None
+        
+        return full_name, price_regex_match
+    
     def parse_stashes(self):
         """Parses the stash data for items matching input specifications.
         Returns matching items to the main thread via queue.
         """
-        price_regex = re.compile('~(b/o|price) ([0-9]+) (' + self.currency + ')')
         for stash in self.stashes:
             for item in stash['items']:
                 if self.dead:
                     return
-                if item['league'] == self.league:
-                    full_name = ' '.join(filter(None, [item['name'], item['typeLine']]))
-                    if full_name.startswith('<<set:MS>><<set:M>><<set:S>>'):
-                        full_name = full_name[28:]
-                    full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
-                    if self.regex.search(full_text):
-                        price_regex_match = price_regex.match(stash['stash'])
-                        try:
-                            price_regex_match = price_regex.match(item['note'])
-                        except KeyError:
-                            pass
-                        if price_regex_match and float(price_regex_match.group(2)) <= self.maxprice \
-                           and float(price_regex_match.group(2)) >= self.minprice:
-                            print('name: ' + item['name'])
-                            print('type_line: ' + item['typeLine'])
-                            print('full_name: ' + full_name)
-                            self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':full_name,
-                                                            'price':price_regex_match, 'league':item['league'],
-                                                            'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
+                checked_item = self.check_item(item, stash['stash'])
+                if checked_item:
+                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':checked_item[0],
+                                                    'price':checked_item[1], 'league':item['league'],
+                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
         
     def run(self):
         """Main actions of thread.
