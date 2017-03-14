@@ -76,6 +76,7 @@ class App(tk.Tk):
         self.create_option_regex()
         self.create_button_start()
         self.create_button_stop()
+        self.bind('<Return>', lambda event: self.start_parsing())
         
     def parse_config(self):
         """Parses the config file \'scambot.cfg\' or creates a
@@ -209,6 +210,7 @@ class App(tk.Tk):
         """
         self.protocol('WM_DELETE_WINDOW', None)
         self.dead = True
+        self.unbind('<Return>')
         self.button_start.configure(state='disabled')
         self.button_stop.configure(state='disabled')
         self.option_league.configure(state='disabled')
@@ -235,6 +237,7 @@ class App(tk.Tk):
         
     def start_parsing(self):
         """Starts the automatic parsing of stash data."""
+        self.bind('<Return>', lambda event: self.stop_parsing())
         self.button_start.configure(state='disabled')
         self.button_stop.configure(state='normal')
         self.option_league.configure(state='disabled')
@@ -250,6 +253,7 @@ class App(tk.Tk):
         
     def stop_parsing(self):
         """Stops the automatic parsing of stash data."""
+        self.bind('<Return>', lambda event: self.start_parsing())
         self.button_start.configure(state='normal')
         self.button_stop.configure(state='disabled')
         self.option_league.configure(state='readonly')

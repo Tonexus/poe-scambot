@@ -19,7 +19,6 @@ class ParserThread(threading.Thread):
         self.maxprice = maxprice
         self.minprice = minprice
         self.price_regex = re.compile('~(b/o|price) ([0-9]+) (' + currency + ')')
-        self.currency = currency
         self.regex = re.compile(regex, re.IGNORECASE)
         self.start()
         
