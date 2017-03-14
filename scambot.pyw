@@ -45,7 +45,8 @@ class App(tk.Tk):
         """Initializes the app."""
         tk.Tk.__init__(self)
         self.title('PoE ScamBot')
-        self.geometry('800x375+900+200')
+        self.geometry('900x500+900+200')
+        self.configure(bd=5)
         self.resizable(False, False)
         self.iconbitmap('favicon.ico')
         self.protocol('WM_DELETE_WINDOW', self.kill)
@@ -56,17 +57,28 @@ class App(tk.Tk):
         self.start = False
         self.dead = False
         
+        self.results_width = 7
+        self.results_height = 13
+        
+        for i in range(self.results_width + 2):
+            self.columnconfigure(i, weight=1, minsize=70)
+        for i in range(self.results_height + 1):
+            self.rowconfigure(i, weight=1, minsize=35)
+        
         self.league = tk.StringVar()
         self.maxprice = tk.DoubleVar()
         self.minprice = tk.DoubleVar()
         self.currency = tk.StringVar()
+        self.sockets = tk.IntVar()
+        self.links = tk.IntVar()
+        self.corrupted = tk.BooleanVar()
         self.regex = tk.StringVar()
         
         self.create_widgets()
         
         self.parse_config()
         
-        self.after(500, self.check_queue)
+        self.after(50, self.check_queue)
 
     def create_widgets(self):
         """Creates the app\'s widgets."""
@@ -75,6 +87,9 @@ class App(tk.Tk):
         self.create_option_maxprice()
         self.create_option_currency()
         self.create_option_minprice()
+        self.create_option_sockets()
+        self.create_option_links()
+        self.create_option_corrupted()
         self.create_option_regex()
         self.create_button_start()
         self.create_button_stop()
@@ -88,9 +103,12 @@ class App(tk.Tk):
         config['DEFAULT'] = {}
         
         config.set('DEFAULT', 'league', 'Legacy')
-        config.set('DEFAULT', 'currency', 'chaos')
         config.set('DEFAULT', 'maxprice', '20')
         config.set('DEFAULT', 'minprice', '1')
+        config.set('DEFAULT', 'currency', 'chaos')
+        config.set('DEFAULT', 'sockets', '0')
+        config.set('DEFAULT', 'links', '0')
+        config.set('DEFAULT', 'corrupted', 'y')
         
         config.set('DEFAULT', 'max_console_size', '1000')
         config.set('DEFAULT', 'clipboard', 'y')
@@ -107,12 +125,15 @@ class App(tk.Tk):
             self.league.set(config.get('defaults', 'league'))
         else:
             self.league.set(config.get('DEFAULT', 'league'))
+        self.maxprice.set(float(config.get('defaults', 'maxprice')))
+        self.minprice.set(float(config.get('defaults', 'minprice')))
         if config.get('defaults', 'currency') in currency_abbreviated:
             self.currency.set(config.get('defaults', 'currency'))
         else:
             self.currency.set(config.get('DEFAULT', 'currency'))
-        self.maxprice.set(float(config.get('defaults', 'maxprice')))
-        self.minprice.set(float(config.get('defaults', 'minprice')))
+        self.sockets.set(int(config.get('defaults', 'sockets')))
+        self.links.set(int(config.get('defaults', 'links')))
+        self.corrupted.set(config.get('defaults', 'corrupted') == 'y')
         
         self.max_console_size = int(config.get('output', 'max_console_size'))
         self.clipboard = True if config.get('output', 'clipboard') == 'y' else False
@@ -122,16 +143,17 @@ class App(tk.Tk):
         
     def create_search_results(self):
         """Creates the search results pane."""
-        self.results_frame = ttk.Frame(self)
-        self.results_frame.grid(row=0, column=0, rowspan=15, columnspan=8, padx=5, pady=5)
+        self.results_frame = tk.Frame(self, bd=1, relief='sunken')
+        self.results_frame.grid(row=0, column=0, rowspan=self.results_height, columnspan=self.results_width, padx=5, pady=5)
         
-        self.results_text = tk.Text(self.results_frame, height=20, width=76)
-        self.results_text.grid(row=0, column=0)
+        self.results_scroll = tk.Scrollbar(self.results_frame)
+        self.results_scroll.pack(side='right', fill='y')
+        
+        self.results_text = tk.Text(self.results_frame, bd=0, height=30, width=100)
+        self.results_text.pack()
         self.results_text.configure(state='disabled')
         
-        self.results_scroll = tk.Scrollbar(self.results_frame, command=self.results_text.yview)
-        self.results_scroll.grid(row=0, column=1, sticky=tk.N+tk.S)
-        
+        self.results_scroll.configure(command=self.results_text.yview)
         self.results_text['yscrollcommand'] = self.results_scroll.set
         
     def create_option_league(self):
@@ -139,10 +161,10 @@ class App(tk.Tk):
         that the items will be searched in.
         """
         self.label_league = ttk.Label(self, text='League')
-        self.label_league.grid(row=0, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        self.label_league.grid(row=0, column=self.results_width, columnspan=2, padx=5, pady=1, sticky='w')
         
-        self.option_league = ttk.Combobox(self, textvariable=self.league, state='readonly', width=20)
-        self.option_league.grid(row=1, column=8, columnspan=2, padx=5, pady=1)
+        self.option_league = ttk.Combobox(self, textvariable=self.league, state='readonly', width=0)
+        self.option_league.grid(row=1, column=self.results_width, columnspan=2, padx=5, pady=1, sticky='ew')
         self.option_league['values'] = current_leagues
         
     def create_option_maxprice(self):
@@ -150,22 +172,20 @@ class App(tk.Tk):
         maximum price of an item that the system will return.
         """
         self.label_maxprice = ttk.Label(self, text='Maximum Price')
-        self.label_maxprice.grid(row=2, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        self.label_maxprice.grid(row=2, column=self.results_width, columnspan=2, padx=5, pady=1, sticky='w')
         
-        self.option_maxprice = ttk.Entry(self, textvariable=self.maxprice, width=10)
-        self.option_maxprice.grid(row=3, column=8, padx=5, pady=1)
-        self.option_maxprice.delete(0, tk.END)
+        self.option_maxprice = ttk.Entry(self, textvariable=self.maxprice, width=0)
+        self.option_maxprice.grid(row=3, column=self.results_width, padx=5, pady=1, sticky='ew')
         
     def create_option_minprice(self):
         """Creates the min price field. Min price determines the
         minimum price of an item that the system will return.
         """
         self.label_minprice = ttk.Label(self, text='Minimum Price')
-        self.label_minprice.grid(row=4, column=8, columnspan=2, padx=5, pady=1, sticky=tk.W)
+        self.label_minprice.grid(row=4, column=self.results_width, columnspan=2, padx=5, pady=1, sticky='w')
         
-        self.option_minprice = ttk.Entry(self, textvariable=self.minprice, width=10)
-        self.option_minprice.grid(row=5, column=8, padx=5, pady=1)
-        self.option_minprice.delete(0, tk.END)
+        self.option_minprice = ttk.Entry(self, textvariable=self.minprice, width=0)
+        self.option_minprice.grid(row=5, column=self.results_width, padx=5, pady=1, sticky='ew')
         
     def create_option_currency(self):
         """Creates the currency field. Currency determines the type
@@ -173,13 +193,40 @@ class App(tk.Tk):
         script does not support currency exchange rates.
         """
         self.option_currency = []
-        self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=7))
-        self.option_currency[0].grid(row=3, column=9, padx=5, pady=1)
+        self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=0))
+        self.option_currency[0].grid(row=3, column=self.results_width + 1, padx=5, pady=1, sticky='ew')
         self.option_currency[0]['values'] = currency_abbreviated
         
-        self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=7))
-        self.option_currency[1].grid(row=5, column=9, padx=5, pady=1)
+        self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=0))
+        self.option_currency[1].grid(row=5, column=self.results_width + 1, padx=5, pady=1, sticky='ew')
         self.option_currency[1]['values'] = currency_abbreviated
+        
+    def create_option_sockets(self):
+        """Creates the sockets field. Sockets determines the minimum
+        number of sockets that the item must have.
+        """
+        self.label_sockets = ttk.Label(self, text='Sockets')
+        self.label_sockets.grid(row=6, column=self.results_width, padx=5, pady=1, sticky='w')
+        
+        self.option_sockets = ttk.Entry(self, textvariable=self.sockets, width=0)
+        self.option_sockets.grid(row=7, column=self.results_width, padx=5, pady=1, sticky='ew')
+        
+    def create_option_links(self):
+        """Creates the links field. Links determines the minimum
+        number of links that the item must have.
+        """
+        self.label_links = ttk.Label(self, text='Links')
+        self.label_links.grid(row=6, column=self.results_width + 1, padx=5, pady=1, sticky='w')
+        
+        self.option_links = ttk.Entry(self, textvariable=self.links, width=0)
+        self.option_links.grid(row=7, column=self.results_width + 1, padx=5, pady=1, sticky='ew')
+        
+    def create_option_corrupted(self):
+        """Creates the corrupted field. Corrupted determines whether
+        items can be corrupted.
+        """
+        self.option_corrupted = ttk.Checkbutton(self, text='Allow Corrupted', variable=self.corrupted)
+        self.option_corrupted.grid(row=8, column=self.results_width, columnspan=2, padx=5, pady=1, sticky='w')
         
     def create_option_regex(self):
         """Creates the regex field. Regex is not case sensitice and
@@ -188,25 +235,25 @@ class App(tk.Tk):
         explicit mods).
         """
         self.lable_regex = ttk.Label(self, text='Search Regex')
-        self.lable_regex.grid(row=15, column=0, padx=5, pady=5)
+        self.lable_regex.grid(row=self.results_height, column=0, padx=5, pady=5)
         
-        self.option_regex = ttk.Entry(self, textvariable=self.regex, width=75)
-        self.option_regex.grid(row=15, column=1, columnspan=7, padx=5, pady=5, sticky=tk.W)
+        self.option_regex = ttk.Entry(self, textvariable=self.regex, width=100)
+        self.option_regex.grid(row=self.results_height, column=1, columnspan=self.results_width - 1, padx=5, pady=5, sticky='w')
         self.option_regex.focus_set()
         
     def create_button_start(self):
         """Creates the start, which begins the automatic parsing of
         stash data.
         """
-        self.button_start = ttk.Button(self, text='Start', command=self.start_parsing, width=9)
-        self.button_start.grid(row=15, column=8, padx=5, pady=5)
+        self.button_start = ttk.Button(self, text='Start', command=self.start_parsing, width=0)
+        self.button_start.grid(row=self.results_height, column=self.results_width, padx=5, pady=5, sticky='ew')
         
     def create_button_stop(self):
         """Creates the stop button, which ends the automatic parsing
         of stash data.
         """
-        self.button_stop = ttk.Button(self, text='Stop', command=self.stop_parsing, state='disabled', width=9)
-        self.button_stop.grid(row=15, column=9, padx=5, pady=5)
+        self.button_stop = ttk.Button(self, text='Stop', command=self.stop_parsing, state='disabled', width=0)
+        self.button_stop.grid(row=self.results_height, column=self.results_width + 1, padx=5, pady=5, sticky='ew')
         
     def kill(self):
         """Sets the flag to stop all functionality. Ensures that all
@@ -222,18 +269,20 @@ class App(tk.Tk):
         self.option_minprice.configure(state='disabled')
         self.option_currency[0].configure(state='disabled')
         self.option_currency[1].configure(state='disabled')
+        self.option_sockets.configure(state='disabled')
+        self.option_links.configure(state='disabled')
+        self.option_corrupted.configure(state='disabled')
         self.option_regex.configure(state='disabled')
         for thread in self.subthreads:
             thread.kill()
+        self.handle_print('Waiting for subthreads to terminate...')
         self.kill_loop()
         
     def kill_loop(self):
         """Loop that checks whether subthreads have been killed."""
         if len(self.subthreads) == 0:
             self.destroy()
-        else:
-            self.handle_print('Waiting for subthreads to terminate...')
-        self.after(2000, self.kill_loop)
+        self.after(100, self.kill_loop)
         
     def remove_thread(self, thread):
         """Removes the thread from known active subthreads."""
@@ -249,6 +298,9 @@ class App(tk.Tk):
         self.option_minprice.configure(state='disabled')
         self.option_currency[0].configure(state='disabled')
         self.option_currency[1].configure(state='disabled')
+        self.option_sockets.configure(state='disabled')
+        self.option_links.configure(state='disabled')
+        self.option_corrupted.configure(state='disabled')
         self.option_regex.configure(state='disabled')
         self.handle_print('Starting search...')
         self.start = True
@@ -265,6 +317,9 @@ class App(tk.Tk):
         self.option_minprice.configure(state='normal')
         self.option_currency[0].configure(state='readonly')
         self.option_currency[1].configure(state='readonly')
+        self.option_sockets.configure(state='enabled')
+        self.option_links.configure(state='enabled')
+        self.option_corrupted.configure(state='enabled')
         self.option_regex.configure(state='normal')
         self.handle_print('Stopping search...')
         self.start = False
@@ -279,11 +334,13 @@ class App(tk.Tk):
             parse_id = None
             while not self.queue_parse_ids.empty():
                 parse_id = self.queue_parse_ids.get()
-            if parse_id is not None:
+            if parse_id:
                 self.handle_print('Parsing ' + parse_id + '...')
                 self.subthreads.append(pt.ParserThread(self, parse_id, self.league.get(), self.maxprice.get(),
                                        self.minprice.get(), self.currency.get(), self.regex.get()))
-            self.after(500, self.parse_stash_data)
+                self.after(750, self.parse_stash_data)
+            else:
+                self.after(50, self.parse_stash_data)
 
     def make_nice_price(self, to_parse):
         """Returns the unabbreviated name of the currency."""
@@ -300,7 +357,24 @@ class App(tk.Tk):
         """
         while not self.queue_results.empty():
             self.handle_result(self.queue_results.get())
-        self.after(500, self.check_queue)
+        self.after(50, self.check_queue)
+        
+    def handle_result(self, result):
+        """Handles one result from the queue."""
+        if result.get('error', None):
+            self.handle_print('Rate limited. Trying again...')
+        else:
+            string = '@{name} Hi, I would like to buy your {item} ' \
+                     'listed for {price} in {league} ' \
+                     '(stash tab {stash}; position: left {x}, top {y})'
+            string = string.format(name=result['name'], item=result['item'],
+                                   price=self.make_nice_price(result['price'].group(2, 3)), league=result['league'],
+                                   stash=result['stash'], x=result['x'], y=result['y'])
+            if self.clipboard:
+                self.clipboard_clear()
+                self.clipboard_append(string)
+            self.handle_print('Found result: ' + string)
+            self.subthreads.append(bt.BeepThread(self))
         
     def handle_print(self, string):
         """Handles printing to the results pane."""
@@ -308,13 +382,13 @@ class App(tk.Tk):
         scroll = (self.results_scroll.get()[1] == 1.0)
         
         self.results_text.configure(state='normal')
-        self.results_text.insert(tk.END, new_string)
-        while float(self.results_text.index(tk.END)) > self.max_console_size + 2:
+        self.results_text.insert('end', new_string)
+        while float(self.results_text.index('end')) > self.max_console_size + 2:
             self.results_text.delete(1.0, 2.0)
         self.results_text.configure(state='disabled')
         
         if scroll:
-            self.results_text.see(tk.END)
+            self.results_text.see('end')
         
         if self.log:
             try:
@@ -322,20 +396,6 @@ class App(tk.Tk):
                     log_file.write(new_string)
             except OSError:
                 self.log = False
-        
-    def handle_result(self, result):
-        """Handles one result from the queue."""
-        string = '@{name} Hi, I would like to buy your {item} ' \
-                 'listed for {price} in {league} ' \
-                 '(stash tab {stash}; position: left {x}, top {y})'
-        string = string.format(name=result['name'], item=result['item'],
-                               price=self.make_nice_price(result['price'].group(2, 3)), league=result['league'],
-                               stash=result['stash'], x=result['x'], y=result['y'])
-        if self.clipboard:
-            self.clipboard_clear()
-            self.clipboard_append(string)
-        self.handle_print('Found result: ' + string)
-        self.subthreads.append(bt.BeepThread(self))
             
 if __name__ == '__main__':
     App().mainloop()

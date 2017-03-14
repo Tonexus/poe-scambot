@@ -26,11 +26,26 @@ class ParserThread(threading.Thread):
         """Reads the JSON data from the stash API into a dictionary.
         Also returns the id of the next chunk of data to the main thread via queue.
         """
-        stash_data = requests.get(stash_api + self.parse_id).json()
-        self.spawner.queue_parse_ids.put(stash_data['next_change_id'])
-        self.stashes = stash_data['stashes']
+        self.stash_data = requests.get(stash_api + self.parse_id).json()
+        self.spawner.queue_parse_ids.put(self.stash_data['next_change_id'])
+    
+    def parse_stashes(self):
+        """Parses the stash data for items matching input specifications.
+        Returns matching items to the main thread via queue.
+        """
+        for stash in self.stash_data['stashes']:
+            for item in stash['items']:
+                if self.dead:
+                    return
+                checked_item = self.check_item(item, stash['stash'])
+                if checked_item:
+                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':checked_item[0],
+                                                    'price':checked_item[1], 'league':item['league'],
+                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
+        
     
     def check_item(self, item, stash):
+        """Checks whether an item meets the search conditions."""
         if not item['league'] == self.league:
             return None
         # if not check links
@@ -54,27 +69,17 @@ class ParserThread(threading.Thread):
             return None
         
         return full_name, price_regex_match
-    
-    def parse_stashes(self):
-        """Parses the stash data for items matching input specifications.
-        Returns matching items to the main thread via queue.
-        """
-        for stash in self.stashes:
-            for item in stash['items']:
-                if self.dead:
-                    return
-                checked_item = self.check_item(item, stash['stash'])
-                if checked_item:
-                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':checked_item[0],
-                                                    'price':checked_item[1], 'league':item['league'],
-                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
         
     def run(self):
         """Main actions of thread.
         First reads the API into an dictionary before parsing that dictionary for the desired items.
         """
-        self.get_stashes()
-        self.parse_stashes()
+        try:
+            self.get_stashes()
+            self.parse_stashes()
+        except KeyError:
+            self.spawner.queue_parse_ids.put(self.parse_id)
+            self.spawner.queue_results.put(self.stash_data)
         self.spawner.remove_thread(self)
     
     def kill(self):
