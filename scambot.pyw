@@ -366,14 +366,6 @@ class App(tk.Tk):
             else:
                 self.after(50, self.parse_stash_data)
 
-    def make_nice_price(self, to_parse):
-        """Returns the unabbreviated name of the currency."""
-        price = round(float(to_parse[0]), 1)
-        if price == 1.0:
-            return str(price) + ' ' + CURRENCY_SINGULAR[CURRENCY_ABBREVIATED.index(to_parse[1])]
-        else:
-            return str(price) + ' ' + CURRENCY_PLURAL[CURRENCY_ABBREVIATED.index(to_parse[1])]
-
     def check_queue(self):
         """Checks whether any threads have reported results and, if
         so, copies a message to the clipboard and reports them to the
@@ -421,6 +413,14 @@ class App(tk.Tk):
                     log_file.write(new_string)
             except OSError:
                 self.log = False
+
+    def make_nice_price(self, to_parse):
+        """Returns the unabbreviated name of the currency."""
+        price = round(float(to_parse[0]), 1)
+        if price == 1.0:
+            return str(price) + ' ' + CURRENCY_SINGULAR[CURRENCY_ABBREVIATED.index(to_parse[1])]
+        else:
+            return str(price) + ' ' + CURRENCY_PLURAL[CURRENCY_ABBREVIATED.index(to_parse[1])]
             
 if __name__ == '__main__':
     App().mainloop()

@@ -3,8 +3,8 @@ import threading
 
 import requests
 
-stash_api = 'http://pathofexile.com/api/public-stash-tabs?id='
-localization = re.compile('<<.*>>')
+STASH_API = 'http://pathofexile.com/api/public-stash-tabs?id='
+LOCALIZATION = re.compile('<<.*>>')
 
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
@@ -25,13 +25,39 @@ class ParserThread(threading.Thread):
         self.regex = re.compile(regex, re.IGNORECASE)
         self.start()
         
+    def run(self):
+        """Main actions of thread.
+        First reads the API into an dictionary before parsing that dictionary for the desired items.
+        """
+        self.get_stashes()
+        self.parse_stashes()
+        self.spawner.remove_thread(self)
+    
+    def kill(self):
+        """Sets the flag to stop processing and terminate the thread."""
+        self.dead = True
+        
     def get_stashes(self):
         """Reads the JSON data from the stash API into a dictionary.
         Also returns the id of the next chunk of data to the main thread via queue.
         """
-        stash_data = requests.get(stash_api + self.parse_id).json()
+        stash_data = requests.get(STASH_API + self.parse_id).json()
         self.spawner.queue_parse_ids.put(stash_data['next_change_id'])
         self.stashes = stash_data['stashes']
+    
+    def parse_stashes(self):
+        """Parses the stash data for items matching input specifications.
+        Returns matching items to the main thread via queue.
+        """
+        for stash in self.stashes:
+            for item in stash['items']:
+                if self.dead:
+                    return
+                checked_item = self.check_item(item, stash['stash'])
+                if checked_item:
+                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':checked_item[0],
+                                                    'price':checked_item[1], 'league':item['league'],
+                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
     
     def check_item(self, item, stash):
         """Checks whether the item matches specifications."""
@@ -47,7 +73,7 @@ class ParserThread(threading.Thread):
         if not self.check_links(item['sockets']):
             return None
         
-        full_name = localization.sub('', ' '.join(filter(None, [item['name'], item['typeLine']])))
+        full_name = LOCALIZATION.sub('', ' '.join(filter(None, [item['name'], item['typeLine']])))
         full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
         
         if not self.regex.search(full_text):
@@ -66,20 +92,6 @@ class ParserThread(threading.Thread):
             return None
         
         return full_name, price_regex_match
-    
-    def parse_stashes(self):
-        """Parses the stash data for items matching input specifications.
-        Returns matching items to the main thread via queue.
-        """
-        for stash in self.stashes:
-            for item in stash['items']:
-                if self.dead:
-                    return
-                checked_item = self.check_item(item, stash['stash'])
-                if checked_item:
-                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':checked_item[0],
-                                                    'price':checked_item[1], 'league':item['league'],
-                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
         
     def check_links(self, item_sockets):
         """Checks whether the item has the desired number of links."""
@@ -90,15 +102,3 @@ class ParserThread(threading.Thread):
             if i >= self.links:
                 return True
         return False
-        
-    def run(self):
-        """Main actions of thread.
-        First reads the API into an dictionary before parsing that dictionary for the desired items.
-        """
-        self.get_stashes()
-        self.parse_stashes()
-        self.spawner.remove_thread(self)
-    
-    def kill(self):
-        """Sets the flag to stop processing and terminate the thread."""
-        self.dead = True
