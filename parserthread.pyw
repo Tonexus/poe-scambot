@@ -22,7 +22,7 @@ class ParserThread(threading.Thread):
         self.links = links
         self.frame_type = frame_type
         self.corrupted = corrupted
-        self.corrupted = crafted
+        self.crafted = crafted
         self.price_regex = re.compile('~(b/o|price) ([0-9]+) (' + currency + ')')
         self.regex = re.compile(regex, re.IGNORECASE)
         self.start()
@@ -67,6 +67,12 @@ class ParserThread(threading.Thread):
             return None
             
         if not self.corrupted and item['corrupted'] == 'True':
+            return None
+            
+        if not self.crafted and 'craftedMods' in item:
+            return None
+            
+        if not self.frame_type == item['frameType']:
             return None
             
         if len(item['sockets']) < self.sockets:
