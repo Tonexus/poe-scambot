@@ -34,6 +34,9 @@ CURRENCY_PLURAL = ['Orbs of Alteration', 'Orbs of Fusing',
                    'Vaal Orbs']
 
 LEAGUES = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
+FRAME_TYPES = ['Normal', 'Magic', 'Rare', 'Unique', 'Gem',
+               'Currency', 'Divination Card', 'Quest Item',
+               'Prophecy', 'Relic']
 
 NINJA_API = 'http://api.poe.ninja/api/Data/GetStats'
 
@@ -43,6 +46,7 @@ DEFAULT_MAXPRICE = 20.0
 DEFAULT_CURRENCY = CURRENCY_ABBREVIATED[3]
 DEFAULT_SOCKETS = 0
 DEFAULT_LINKS = 0
+DEFAULT_FRAME_TYPE = FRAME_TYPES[3]
 
 RESULTS_WIDTH = 7
 RESULTS_HEIGHT = 13
@@ -79,7 +83,9 @@ class App(tk.Tk):
         self.currency = tk.StringVar()
         self.sockets = tk.StringVar()
         self.links = tk.StringVar()
+        self.frame_type = tk.StringVar()
         self.corrupted = tk.BooleanVar()
+        self.crafted = tk.BooleanVar()
         self.regex = tk.StringVar()
         
         self.create_widgets()
@@ -97,7 +103,9 @@ class App(tk.Tk):
         self.create_option_minprice()
         self.create_option_sockets()
         self.create_option_links()
+        self.create_option_frame_type()
         self.create_option_corrupted()
+        self.create_option_crafted()
         self.create_option_regex()
         self.create_button_start()
         self.create_button_stop()
@@ -118,7 +126,9 @@ class App(tk.Tk):
         config.set('DEFAULT', 'currency', DEFAULT_CURRENCY)
         config.set('DEFAULT', 'sockets', str(DEFAULT_SOCKETS))
         config.set('DEFAULT', 'links', str(DEFAULT_LINKS))
+        config.set('DEFAULT', 'frame type', str(DEFAULT_FRAME_TYPE))
         config.set('DEFAULT', 'corrupted', 'y')
+        config.set('DEFAULT', 'crafted', 'y')
         
         config.set('DEFAULT', 'max_console_size', '1000')
         config.set('DEFAULT', 'clipboard', 'y')
@@ -143,7 +153,12 @@ class App(tk.Tk):
             self.currency.set(config.get('DEFAULT', 'currency'))
         self.sockets.set(config.get('defaults', 'sockets'))
         self.links.set(config.get('defaults', 'links'))
+        if config.get('defaults', 'frame type') in FRAME_TYPES:
+            self.frame_type.set(config.get('defaults', 'frame type'))
+        else:
+            self.currency.set(config.get('DEFAULT', 'frame type'))
         self.corrupted.set(config.get('defaults', 'corrupted') == 'y')
+        self.crafted.set(config.get('defaults', 'crafted') == 'y')
         
         self.max_console_size = int(config.get('output', 'max_console_size'))
         self.clipboard = config.get('output', 'clipboard') == 'y'
@@ -231,12 +246,30 @@ class App(tk.Tk):
         self.option_links = ttk.Entry(self, textvariable=self.links, width=0)
         self.option_links.grid(row=7, column=RESULTS_WIDTH + 1, padx=5, pady=1, sticky='ew')
         
+    def create_option_frame_type(self):
+        """Creates the frame type field. Frame type determines what
+        rarity the item must have.
+        """
+        self.label_frame_type = ttk.Label(self, text='Rarity')
+        self.label_frame_type.grid(row=8, column=RESULTS_WIDTH, columnspan=2, padx=5, pady=1, sticky='w')
+        
+        self.option_league = ttk.Combobox(self, textvariable=self.frame_type, state='readonly', width=0)
+        self.option_league.grid(row=9, column=RESULTS_WIDTH, columnspan=2, padx=5, pady=1, sticky='ew')
+        self.option_league['values'] = FRAME_TYPES
+        
     def create_option_corrupted(self):
         """Creates the corrupted field. Corrupted determines whether
         items that have been corrupted are included.
         """
         self.option_corrupted = ttk.Checkbutton(self, text='Allow Corrupted', variable=self.corrupted)
-        self.option_corrupted.grid(row=8, column=RESULTS_WIDTH, columnspan=2, padx=5, pady=1, sticky='w')
+        self.option_corrupted.grid(row=10, column=RESULTS_WIDTH, columnspan=2, padx=5, pady=1, sticky='w')
+        
+    def create_option_crafted(self):
+        """Creates the crafted field. Crafted determines whether
+        items that have been crafted are included.
+        """
+        self.option_crafted = ttk.Checkbutton(self, text='Allow Crafted', variable=self.crafted)
+        self.option_crafted.grid(row=11, column=RESULTS_WIDTH, columnspan=2, padx=5, pady=1, sticky='w')
         
     def create_option_regex(self):
         """Creates the regex field. Regex is not case sensitice and
@@ -363,8 +396,10 @@ class App(tk.Tk):
                 except ValueError:
                     links = DEFAULT_LINKS
                 self.subthreads.append(pt.ParserThread(self, parse_id, self.league.get(), maxprice,
-                                       minprice, self.currency.get(), sockets,
-                                       links, self.corrupted.get(), self.regex.get()))
+                                                       minprice, self.currency.get(), sockets, links,
+                                                       FRAME_TYPES.index(self.frame_type.get()),
+                                                       self.corrupted.get(), self.crafted.get(),
+                                                       self.regex.get()))
                 self.after(750, self.parse_stash_data)
             else:
                 self.after(50, self.parse_stash_data)

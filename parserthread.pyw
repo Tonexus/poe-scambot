@@ -9,7 +9,7 @@ LOCALIZATION = re.compile('<<.*>>')
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
 
-    def __init__(self, spawner, parse_id, league, maxprice, minprice, currency, sockets, links, corrupted, regex):
+    def __init__(self, spawner, parse_id, league, maxprice, minprice, currency, sockets, links, frame_type, corrupted, crafted, regex):
         """Initializes the thread with a reference to the creator thread and specified seearch parameters."""
         threading.Thread.__init__(self)
         self.dead = False
@@ -20,8 +20,10 @@ class ParserThread(threading.Thread):
         self.minprice = minprice
         self.sockets = max(sockets, links)
         self.links = links
-        self.price_regex = re.compile('~(b/o|price) ([0-9]+) (' + currency + ')')
+        self.frame_type = frame_type
         self.corrupted = corrupted
+        self.corrupted = crafted
+        self.price_regex = re.compile('~(b/o|price) ([0-9]+) (' + currency + ')')
         self.regex = re.compile(regex, re.IGNORECASE)
         self.start()
         
