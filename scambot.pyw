@@ -455,7 +455,9 @@ class App(tk.Tk):
     def make_nice_price(self, to_parse):
         """Returns the unabbreviated name of the currency."""
         price = round(float(to_parse[0]), 1)
-        if price == 1.0:
+        if price.is_integer():
+            price = int(price)
+        if price == 1:
             return str(price) + ' ' + CURRENCY_SINGULAR[CURRENCY_ABBREVIATED.index(to_parse[1])]
         else:
             return str(price) + ' ' + CURRENCY_PLURAL[CURRENCY_ABBREVIATED.index(to_parse[1])]
