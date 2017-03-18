@@ -25,7 +25,9 @@ Maximum Price   - the maximum price that the item should have
 Minimum Price   - the minimum price that the item should have
 Sockets         - the number of sockets that the item should have
 Links           - the number of links that the item should have
+Rarity          - the rarity type that the item should have
 Allow Corrupted - whether the item can be corrupted
+Allow Crafted   - whether the item can be crafted
 Search Regex    - the regular expression that should match the item's
                   text. (The item's text is made by concatenating the
                   item's name, implicit mods, and explicit mods.)
