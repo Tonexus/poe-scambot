@@ -253,9 +253,9 @@ class App(tk.Tk):
         self.label_frame_type = ttk.Label(self, text='Rarity')
         self.label_frame_type.grid(row=8, column=RESULTS_WIDTH, columnspan=2, padx=5, pady=1, sticky='w')
         
-        self.option_league = ttk.Combobox(self, textvariable=self.frame_type, state='readonly', width=0)
-        self.option_league.grid(row=9, column=RESULTS_WIDTH, columnspan=2, padx=5, pady=1, sticky='ew')
-        self.option_league['values'] = FRAME_TYPES
+        self.option_frame_type = ttk.Combobox(self, textvariable=self.frame_type, state='readonly', width=0)
+        self.option_frame_type.grid(row=9, column=RESULTS_WIDTH, columnspan=2, padx=5, pady=1, sticky='ew')
+        self.option_frame_type['values'] = FRAME_TYPES
         
     def create_option_corrupted(self):
         """Creates the corrupted field. Corrupted determines whether
@@ -314,7 +314,9 @@ class App(tk.Tk):
         self.option_currency[1].configure(state='disabled')
         self.option_sockets.configure(state='disabled')
         self.option_links.configure(state='disabled')
+        self.option_frame_type.configure(state='disabled')
         self.option_corrupted.configure(state='disabled')
+        self.option_crafted.configure(state='disabled')
         self.option_regex.configure(state='disabled')
         for thread in self.subthreads:
             thread.kill()
@@ -343,7 +345,9 @@ class App(tk.Tk):
         self.option_currency[1].configure(state='disabled')
         self.option_sockets.configure(state='disabled')
         self.option_links.configure(state='disabled')
+        self.option_frame_type.configure(state='disabled')
         self.option_corrupted.configure(state='disabled')
+        self.option_crafted.configure(state='disabled')
         self.option_regex.configure(state='disabled')
         self.handle_print('Starting search...')
         self.start = True
@@ -362,7 +366,9 @@ class App(tk.Tk):
         self.option_currency[1].configure(state='readonly')
         self.option_sockets.configure(state='enabled')
         self.option_links.configure(state='enabled')
+        self.option_frame_type.configure(state='enabled')
         self.option_corrupted.configure(state='enabled')
+        self.option_crafted.configure(state='enabled')
         self.option_regex.configure(state='normal')
         self.handle_print('Stopping search...')
         self.start = False
