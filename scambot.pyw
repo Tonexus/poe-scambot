@@ -1,4 +1,5 @@
 import time
+import os
 import queue
 import configparser
 import tkinter as tk
@@ -58,7 +59,7 @@ class App(tk.Tk):
         self.geometry('900x500+900+200')
         self.configure(bd=5)
         self.resizable(False, False)
-        self.iconbitmap('favicon.ico')
+        self.iconbitmap(os.path.join(os.path.dirname(__file__), 'favicon.ico'))
         self.protocol('WM_DELETE_WINDOW', self.kill)
         
         self.subthreads = []
@@ -108,6 +109,8 @@ class App(tk.Tk):
         fn = 'scambot.cfg'
         config = configparser.ConfigParser()
         config['DEFAULT'] = {}
+        config['defaults'] = {}
+        config['output'] = {}
         
         config.set('DEFAULT', 'league', DEFAULT_LEAGUE)
         config.set('DEFAULT', 'maxprice', str(DEFAULT_MAXPRICE))
