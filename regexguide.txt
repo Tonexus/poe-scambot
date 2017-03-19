@@ -1,0 +1,35 @@
+Quick Regex Guide:
+(Full Python regex info at https://docs.python.org/3/library/re.html)
+Regex (regular expressions) are special strings used for matching.
+The important ones are ".", "+", "[]", "|", and "()".
+
+The "." character matches any single character, so the regex "H.llo"
+will match the string "Hello", but also match "Hallo", "Hbllo",
+"H6llo", and so on. The "+" character is used in conjunction with the
+previous character to match one or more repetitions of that
+character. For instance, "Hel+o" will match "Helo", "Hello",
+"Helllllllllo", and so on.
+
+The "." and "+" characters can be combined to search for separate
+terms within the whole string. Consider the regex "Good.+Day". This
+will match any string that contains both "Good" and "Day" in that
+order, but with any number of characters in between.
+
+The "[]" characters are used to match a single character in the
+enclosed set. The regex "H[eau]llo" will match any of the strings
+"Hello", "Hallo", or "Hullo". Additionally, sets can also contain
+ranges, as indicated using a "-", such as "[a-z]", which will match
+any single lowercase alphabet character, or "[0-9]", which will match
+any single digit integer.
+
+The "|" operator is used to match either the regex that comes before
+the character or the regex that comes befor the character. For
+example, the regex "Hello|Goodbye" will match both "Hello" and
+"Goodbye". The "|" character is often used together with the "()",
+which are used for grouping. This is so that the "|" character can be
+used in a bigger overall regex, such as in "(Hello|Goodbye), friend".
+
+Combined, these characters can be used to fit almost any search
+(especially for rares). If you want to find a pair of boots with T1
+life, T1 movement speed, and T1 cold resist, you can search
+"8[0-9] to maximum life.+4[6-8]% to cold.+30% increased move"

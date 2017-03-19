@@ -1,19 +1,24 @@
 Name:                   PoE ScamBot
 Author:                 Tony Lau
-System Requirements:    Windows, Python 3.6
+System Requirements:    Windows, Python 3.6.0
 Dependencies:           requests
 
-PoE ScamBot is tool for maintaining a live search of the Path of
-Exile stash tab API. Unlike some other indexers, such as poe.trade or
-poe.ninja, ScamBot does not track historical data and is only a
-lightweight parser. Thus, an item may show up multiple times if a
-player modified other items in the stash.
+PoE ScamBot is a search engine (not an indexer) that maintains a live
+search of the Path of Exile stash tab API. Unlike indexers, such as
+poe.trade or poeapp.com, ScamBot does not track historical data and
+is instead a lightweight parser. Thus, an item may show up multiple
+times if the player modified other items in their stash.
+
+Set Up:
+1. Install Python 3.6.0 from https://www.python.org/
+2. Run command prompt as an administrator
+3. Run the command "pip install requests"
 
 Usage:
 1.  Run scambot.pyw
 2.  Under the default settings, simply input the desired parameters
-    then press "Start". The app will automatically start searching for
-    items with the input parameters.
+    then press "Start". The app will automatically start searching
+    for items with the input parameters.
 3.  Start playing Path of Exile.
 4.  When the app finds a result, it will play a tone and copy a
     whisper message to your clipboard.
