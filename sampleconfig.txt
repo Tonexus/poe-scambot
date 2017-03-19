@@ -1,0 +1,13 @@
+# This is a sample config file.
+# Rename this as "scambot.cfg" to test it out
+
+[defaults]
+league = Hardcore Legacy
+currency = exa
+maxprice = 3
+minprice = 1
+
+[output]
+max_console_size = 50
+beep_frequency = 880
+beep_duration = 500

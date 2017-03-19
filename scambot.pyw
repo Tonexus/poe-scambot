@@ -49,6 +49,12 @@ DEFAULT_SOCKETS = 0
 DEFAULT_LINKS = 0
 DEFAULT_FRAME_TYPE = FRAME_TYPES[3]
 
+DEFAULT_REFRESH_RATE = 750
+
+DEFAULT_CONSOLE_SIZE = 1000
+DEFAULT_BEEP_DURATION = 1000
+DEFAULT_BEEP_FREQUENCY = 440
+
 RESULTS_WIDTH = 7
 RESULTS_HEIGHT = 13
 
@@ -116,24 +122,28 @@ class App(tk.Tk):
         """
         fn = 'scambot.cfg'
         config = configparser.ConfigParser()
-        config['DEFAULT'] = {}
         config['defaults'] = {}
+        config['system'] = {}
         config['output'] = {}
         
-        config.set('DEFAULT', 'league', DEFAULT_LEAGUE)
-        config.set('DEFAULT', 'maxprice', str(DEFAULT_MAXPRICE))
-        config.set('DEFAULT', 'minprice', str(DEFAULT_MINPRICE))
-        config.set('DEFAULT', 'currency', DEFAULT_CURRENCY)
-        config.set('DEFAULT', 'sockets', str(DEFAULT_SOCKETS))
-        config.set('DEFAULT', 'links', str(DEFAULT_LINKS))
-        config.set('DEFAULT', 'frame type', str(DEFAULT_FRAME_TYPE))
-        config.set('DEFAULT', 'corrupted', 'y')
-        config.set('DEFAULT', 'crafted', 'y')
+        config.set('defaults', 'league', DEFAULT_LEAGUE)
+        config.set('defaults', 'maxprice', str(DEFAULT_MAXPRICE))
+        config.set('defaults', 'minprice', str(DEFAULT_MINPRICE))
+        config.set('defaults', 'currency', DEFAULT_CURRENCY)
+        config.set('defaults', 'sockets', str(DEFAULT_SOCKETS))
+        config.set('defaults', 'links', str(DEFAULT_LINKS))
+        config.set('defaults', 'frame type', DEFAULT_FRAME_TYPE)
+        config.set('defaults', 'corrupted', 'y')
+        config.set('defaults', 'crafted', 'y')
         
-        config.set('DEFAULT', 'max_console_size', '1000')
-        config.set('DEFAULT', 'clipboard', 'y')
-        config.set('DEFAULT', 'log', 'n')
-        config.set('DEFAULT', 'log_path', '')
+        config.set('system', 'refresh_rate', str(DEFAULT_REFRESH_RATE))
+        
+        config.set('output', 'max_console_size', str(DEFAULT_CONSOLE_SIZE))
+        config.set('output', 'beep_frequency', str(DEFAULT_BEEP_FREQUENCY))
+        config.set('output', 'beep_duration', str(DEFAULT_BEEP_DURATION))
+        config.set('output', 'clipboard', 'y')
+        config.set('output', 'log', 'n')
+        config.set('output', 'log_path', '')
         
         try:
             with open(fn, 'r') as cfg_file:
@@ -144,23 +154,27 @@ class App(tk.Tk):
         if config.get('defaults', 'league') in LEAGUES:
             self.league.set(config.get('defaults', 'league'))
         else:
-            self.league.set(config.get('DEFAULT', 'league'))
+            self.league.set(DEFAULT_LEAGUE)
         self.maxprice.set(config.get('defaults', 'maxprice'))
         self.minprice.set(config.get('defaults', 'minprice'))
         if config.get('defaults', 'currency') in CURRENCY_ABBREVIATED:
             self.currency.set(config.get('defaults', 'currency'))
         else:
-            self.currency.set(config.get('DEFAULT', 'currency'))
+            self.currency.set(DEFAULT_CURRENCY)
         self.sockets.set(config.get('defaults', 'sockets'))
         self.links.set(config.get('defaults', 'links'))
         if config.get('defaults', 'frame type') in FRAME_TYPES:
             self.frame_type.set(config.get('defaults', 'frame type'))
         else:
-            self.currency.set(config.get('DEFAULT', 'frame type'))
+            self.currency.set(DEFAULT_FRAME_TYPE)
         self.corrupted.set(config.get('defaults', 'corrupted') == 'y')
         self.crafted.set(config.get('defaults', 'crafted') == 'y')
         
+        self.refresh_rate = int(config.get('system', 'refresh_rate'))
+        
         self.max_console_size = int(config.get('output', 'max_console_size'))
+        self.beep_frequency = int(config.get('output', 'beep_frequency'))
+        self.beep_duration = int(config.get('output', 'beep_duration'))
         self.clipboard = config.get('output', 'clipboard') == 'y'
         self.log = config.get('output', 'log') == 'y'
         if self.log:
@@ -404,7 +418,7 @@ class App(tk.Tk):
                                 FRAME_TYPES.index(self.frame_type.get()),
                                 self.corrupted.get(), self.crafted.get(),
                                 self.regex.get())
-                self.after(750, self.parse_stash_data)
+                self.after(self.refresh_rate, self.parse_stash_data)
             else:
                 self.after(50, self.parse_stash_data)
 
@@ -433,7 +447,7 @@ class App(tk.Tk):
                 self.clipboard_clear()
                 self.clipboard_append(string)
             self.handle_print('Found result: ' + string)
-            bt.BeepThread(self)
+            bt.BeepThread(self, self.beep_frequency, self.beep_duration)
         
     def handle_print(self, string):
         """Handles printing to the results pane."""
