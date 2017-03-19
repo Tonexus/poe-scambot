@@ -447,7 +447,7 @@ class App(tk.Tk):
                 self.clipboard_clear()
                 self.clipboard_append(string)
             self.handle_print('Found result: ' + string)
-            bt.BeepThread(self, self.beep_frequency, self.beep_duration)
+            bt.BeepThread(self.beep_frequency, self.beep_duration)
         
     def handle_print(self, string):
         """Handles printing to the results pane."""
