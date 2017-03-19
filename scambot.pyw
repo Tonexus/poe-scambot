@@ -2,6 +2,7 @@ import time
 import os
 import queue
 import configparser
+import threading
 import tkinter as tk
 from tkinter import ttk
 
@@ -66,7 +67,6 @@ class App(tk.Tk):
         self.iconbitmap(os.path.join(os.path.dirname(__file__), 'favicon.ico'))
         self.protocol('WM_DELETE_WINDOW', self.kill)
         
-        self.subthreads = []
         self.queue_results = queue.Queue()
         self.queue_parse_ids = queue.Queue()
         self.start = False
@@ -318,20 +318,17 @@ class App(tk.Tk):
         self.option_corrupted.configure(state='disabled')
         self.option_crafted.configure(state='disabled')
         self.option_regex.configure(state='disabled')
-        for thread in self.subthreads:
-            thread.kill()
+        for thread in threading.enumerate():
+            if not thread == threading.main_thread():
+                thread.kill()
         self.handle_print('Waiting for subthreads to terminate...')
         self.kill_loop()
         
     def kill_loop(self):
         """Loop that checks whether subthreads have been killed."""
-        if len(self.subthreads) == 0:
+        if threading.active_count() == 1:
             self.destroy()
         self.after(50, self.kill_loop)
-        
-    def remove_thread(self, thread):
-        """Removes the thread from known active subthreads."""
-        self.subthreads.remove(thread)
         
     def start_parsing(self):
         """Starts the automatic parsing of stash data."""
@@ -372,8 +369,9 @@ class App(tk.Tk):
         self.option_regex.configure(state='normal')
         self.handle_print('Stopping search...')
         self.start = False
-        for thread in self.subthreads:
-            thread.kill()
+        for thread in threading.enumerate():
+            if not thread == threading.main_thread():
+                thread.kill()
         
     def parse_stash_data(self):
         """If there exists a new id to parse, spawns a new thread to
@@ -401,11 +399,11 @@ class App(tk.Tk):
                     links = int(self.links.get())
                 except ValueError:
                     links = DEFAULT_LINKS
-                self.subthreads.append(pt.ParserThread(self, parse_id, self.league.get(), maxprice,
-                                                       minprice, self.currency.get(), sockets, links,
-                                                       FRAME_TYPES.index(self.frame_type.get()),
-                                                       self.corrupted.get(), self.crafted.get(),
-                                                       self.regex.get()))
+                pt.ParserThread(self, parse_id, self.league.get(), maxprice,
+                                minprice, self.currency.get(), sockets, links,
+                                FRAME_TYPES.index(self.frame_type.get()),
+                                self.corrupted.get(), self.crafted.get(),
+                                self.regex.get())
                 self.after(750, self.parse_stash_data)
             else:
                 self.after(50, self.parse_stash_data)
@@ -435,7 +433,7 @@ class App(tk.Tk):
                 self.clipboard_clear()
                 self.clipboard_append(string)
             self.handle_print('Found result: ' + string)
-            self.subthreads.append(bt.BeepThread(self))
+            bt.BeepThread(self)
         
     def handle_print(self, string):
         """Handles printing to the results pane."""

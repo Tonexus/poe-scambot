@@ -33,7 +33,6 @@ class ParserThread(threading.Thread):
         """
         self.get_stashes()
         self.parse_stashes()
-        self.spawner.remove_thread(self)
     
     def kill(self):
         """Sets the flag to stop processing and terminate the thread."""

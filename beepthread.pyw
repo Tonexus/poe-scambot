@@ -13,7 +13,6 @@ class BeepThread(threading.Thread):
     def run(self):
         """Main action of the thread. Plays a tone."""
         winsound.Beep(440, 1000)
-        self.spawner.remove_thread(self)
     
     def kill(self):
         """Thread dies in 1 second anyways."""
