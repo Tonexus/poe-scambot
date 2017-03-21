@@ -10,8 +10,9 @@ is instead a lightweight parser. Thus, an item may show up multiple
 times if the player modified other items in their stash.
 
 Set Up:
-1. Install Python 3.6.0 from https://www.python.org/
-2. Run command prompt as an administrator
+1. Install Python 3.6.0 from https://www.python.org/. During
+   installation, make sure the "Add Python to PATH" box is checked.
+2. Open command prompt as an administrator
 3. Run the command "pip install requests"
 
 Usage:

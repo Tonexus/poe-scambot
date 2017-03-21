@@ -16,25 +16,13 @@ CURRENCY_ABBREVIATED = ['alt', 'fuse', 'alch', 'chaos', 'gcp', 'exa',
                         'blessed', 'regret', 'regal', 'divine',
                         'vaal']
 
-CURRENCY_SINGULAR = ['Orb of Alteration', 'Orb of Fusing',
-                     'Orb of Alchemy', 'Chaos Orb',
-                     'Gemcutter\'s Prism', 'Exalted Orb',
-                     'Chromatic Orb', 'Jeweller\'s Orb',
-                     'Orb of Chance', 'Cartographer\'s Chisel',
-                     'Orb of Scouring', 'Blessed Orb',
-                     'Orb of Regret', 'Regal Orb', 'Divine Orb',
-                     'Vaal Orb']
-
-CURRENCY_PLURAL = ['Orbs of Alteration', 'Orbs of Fusing',
-                   'Orbs of Alchemy', 'Chaos Orbs',
-                   'Gemcutter\'s Prisms', 'Exalted Orbs',
-                   'Chromatic Orbs', 'Jeweller\'s Orbs',
-                   'Orbs of Chance', 'Cartographer\'s Chisels',
-                   'Orbs of Scouring', 'Blessed Orbs',
-                   'Orbs of Regret', 'Regal Orbs', 'Divine Orbs',
-                   'Vaal Orbs']
+CURRENCY_NICE = ['alteration', 'fusing', 'alchemy', 'chaos', 'gcp',
+                 'exalted', 'chromatic', 'jewellers', 'chance',
+                 'chisel', 'scouring', 'blessed', 'regret', 'regal',
+                 'divine', 'vaal']
 
 LEAGUES = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
+
 FRAME_TYPES = ['Normal', 'Magic', 'Rare', 'Unique', 'Gem',
                'Currency', 'Divination Card', 'Quest Item',
                'Prophecy', 'Relic']
@@ -438,7 +426,7 @@ class App(tk.Tk):
         else:
             string = '@{name} Hi, I would like to buy your {item} ' \
                      'listed for {price} in {league} ' \
-                     '(stash tab {stash}; position: left {x}, top {y})'
+                     '(stash tab \"{stash}\"; position: left {x}, top {y})'
             string = string.format(name=result['name'], item=result['item'],
                                    price=self.make_nice_price(result['price'].group(2, 3)),
                                    league=result['league'], stash=result['stash'],
@@ -475,10 +463,7 @@ class App(tk.Tk):
         price = round(float(to_parse[0]), 1)
         if price.is_integer():
             price = int(price)
-        if price == 1:
-            return str(price) + ' ' + CURRENCY_SINGULAR[CURRENCY_ABBREVIATED.index(to_parse[1])]
-        else:
-            return str(price) + ' ' + CURRENCY_PLURAL[CURRENCY_ABBREVIATED.index(to_parse[1])]
+        return str(price) + ' ' + CURRENCY_NICE[CURRENCY_ABBREVIATED.index(to_parse[1])]
             
 if __name__ == '__main__':
     App().mainloop()
