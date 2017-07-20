@@ -8,6 +8,7 @@ from tkinter import ttk
 
 import requests
 
+import searchparameters as sp
 import parserthread as pt
 import beepthread as bt
 
@@ -21,7 +22,7 @@ CURRENCY_NICE = ['alteration', 'fusing', 'alchemy', 'chaos', 'gcp',
                  'chisel', 'scouring', 'blessed', 'regret', 'regal',
                  'divine', 'vaal']
 
-LEAGUES = ['Legacy', 'Hardcore Legacy', 'Standard', 'Hardcore']
+LEAGUES = ['Legacy', 'Standard', 'Hardcore']
 
 FRAME_TYPES = ['Normal', 'Magic', 'Rare', 'Unique', 'Gem',
                'Currency', 'Divination Card', 'Quest Item',
@@ -350,7 +351,7 @@ class App(tk.Tk):
         self.option_regex.configure(state='disabled')
         self.handle_print('Starting search...')
         self.start = True
-        self.queue_parse_ids.put(requests.get(NINJA_API).json()['nextChangeId'])
+        self.queue_parse_ids.put(requests.get(NINJA_API).json()['nextBetaChangeId'])
         self.parse_stash_data()
         
     def stop_parsing(self):
@@ -401,11 +402,12 @@ class App(tk.Tk):
                     links = int(self.links.get())
                 except ValueError:
                     links = DEFAULT_LINKS
-                pt.ParserThread(self, parse_id, self.league.get(), maxprice,
-                                minprice, self.currency.get(), sockets, links,
-                                FRAME_TYPES.index(self.frame_type.get()),
-                                self.corrupted.get(), self.crafted.get(),
-                                self.regex.get())
+                params = sp.SearchParameters(self.league.get(), maxprice, minprice,
+                                             self.currency.get(), sockets, links,
+                                             FRAME_TYPES.index(self.frame_type.get()),
+                                             self.corrupted.get(), self.crafted.get(),
+                                             self.regex.get())
+                pt.ParserThread(self, parse_id, params)
                 self.after(self.refresh_rate, self.parse_stash_data)
             else:
                 self.after(50, self.parse_stash_data)
