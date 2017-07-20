@@ -351,7 +351,7 @@ class App(tk.Tk):
         self.option_regex.configure(state='disabled')
         self.handle_print('Starting search...')
         self.start = True
-        self.queue_parse_ids.put(requests.get(NINJA_API).json()['nextBetaChangeId'])
+        self.queue_parse_ids.put(requests.get(NINJA_API).json()['nextChangeId'])
         self.parse_stash_data()
         
     def stop_parsing(self):

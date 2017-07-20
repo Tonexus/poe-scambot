@@ -3,7 +3,7 @@ import threading
 
 import requests
 
-STASH_API = 'http://betaapi.pathofexile.com/api/public-stash-tabs?id='
+STASH_API = 'http://api.pathofexile.com/api/public-stash-tabs?id='
 LOCALIZATION = re.compile('<<.*>>')
 
 class ParserThread(threading.Thread):
