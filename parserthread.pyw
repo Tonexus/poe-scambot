@@ -9,13 +9,13 @@ LOCALIZATION = re.compile('<<.*>>')
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
 
-    def __init__(self, spawner, parse_id, params):
+    def __init__(self, spawner, parse_id, params_list):
         """Initializes the thread with a reference to the creator thread and specified seearch parameters."""
         threading.Thread.__init__(self)
         self.dead = False
         self.spawner = spawner
         self.parse_id = parse_id
-        self.params = params
+        self.params_list = params_list
         self.start()
         
     def run(self):
@@ -45,58 +45,62 @@ class ParserThread(threading.Thread):
             for item in stash['items']:
                 if self.dead:
                     return
-                checked_item = self.check_item(item, stash['stash'])
-                if checked_item:
-                    self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':checked_item[0],
-                                                    'price':checked_item[1], 'league':item['league'],
-                                                    'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
+                for params in self.params_list:
+                    checked_item = self.check_item(item, stash['stash'], params)
+                    if checked_item:
+                        self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':checked_item[0],
+                                                        'price':checked_item[1], 'league':item['league'],
+                                                        'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
     
-    def check_item(self, item, stash):
+    def check_item(self, item, stash, params):
         """Checks whether the item matches specifications."""
-        if not item['league'] == self.params.league:
-            return None
-            
-        if not self.params.corrupted and item['corrupted'] == 'True':
-            return None
-            
-        if not self.params.crafted and 'craftedMods' in item:
-            return None
-            
-        if not self.params.frame_type == item['frameType']:
-            return None
-            
-        if len(item['sockets']) < self.params.sockets:
+        if not params.regex.pattern:
             return None
         
-        if not self.check_links(item['sockets']):
+        if not item['league'] == params.league:
+            return None
+            
+        if not params.corrupted and item['corrupted'] == 'True':
+            return None
+            
+        if not params.crafted and 'craftedMods' in item:
+            return None
+            
+        if not params.frame_type == item['frameType']:
+            return None
+            
+        if len(item['sockets']) < params.sockets:
+            return None
+        
+        if not self.check_links(item['sockets'], params.links):
             return None
         
         full_name = LOCALIZATION.sub('', ' '.join(filter(None, [item['name'], item['typeLine']])))
         full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
         
-        if not self.params.regex.search(full_text):
+        if not params.regex.search(full_text):
             return None
             
-        price_regex_match = self.params.price_regex.match(stash)
+        price_regex_match = params.price_regex.match(stash)
         try:
-            price_regex_match = self.params.price_regex.match(item['note'])
+            price_regex_match = params.price_regex.match(item['note'])
         except KeyError:
             pass
             
         if not price_regex_match:
             return None
             
-        if float(price_regex_match.group(2)) > self.params.maxprice or float(price_regex_match.group(2)) < self.params.minprice:
+        if float(price_regex_match.group(2)) > params.maxprice or float(price_regex_match.group(2)) < params.minprice:
             return None
         
         return full_name, price_regex_match
         
-    def check_links(self, item_sockets):
+    def check_links(self, item_sockets, links):
         """Checks whether the item has the desired number of links."""
         groups = [0] * 6
         for socket in item_sockets:
             groups[socket['group']] += 1
         for i in groups:
-            if i >= self.params.links:
+            if i >= links:
                 return True
         return False
