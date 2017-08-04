@@ -8,44 +8,11 @@ from tkinter import ttk
 
 import requests
 
+import constants
 import searchparameters as sp
 import parserthread as pt
 import beepthread as bt
-
-CURRENCY_ABBREVIATED = ['alt', 'fuse', 'alch', 'chaos', 'gcp', 'exa',
-                        'chrom', 'jew', 'chance', 'chisel', 'scour',
-                        'blessed', 'regret', 'regal', 'divine',
-                        'vaal']
-
-CURRENCY_NICE = ['alteration', 'fusing', 'alchemy', 'chaos', 'gcp',
-                 'exalted', 'chromatic', 'jewellers', 'chance',
-                 'chisel', 'scouring', 'blessed', 'regret', 'regal',
-                 'divine', 'vaal']
-
-LEAGUES = ['Legacy', 'Standard', 'Hardcore']
-
-FRAME_TYPES = ['Normal', 'Magic', 'Rare', 'Unique', 'Gem',
-               'Currency', 'Divination Card', 'Quest Item',
-               'Prophecy', 'Relic']
-
-NINJA_API = 'http://api.poe.ninja/api/Data/GetStats'
-
-DEFAULT_LEAGUE = LEAGUES[0]
-DEFAULT_MINPRICE = 1.0
-DEFAULT_MAXPRICE = 20.0
-DEFAULT_CURRENCY = CURRENCY_ABBREVIATED[3]
-DEFAULT_SOCKETS = 0
-DEFAULT_LINKS = 0
-DEFAULT_FRAME_TYPE = FRAME_TYPES[3]
-
-DEFAULT_REFRESH_RATE = 750
-
-DEFAULT_CONSOLE_SIZE = 1000
-DEFAULT_BEEP_DURATION = 1000
-DEFAULT_BEEP_FREQUENCY = 440
-
-RESULTS_WIDTH = 7
-RESULTS_HEIGHT = 13
+import exchangerates as er
 
 class App(tk.Tk):
     """App that centralizes all of the live search functionality with
@@ -63,17 +30,22 @@ class App(tk.Tk):
         self.protocol('WM_DELETE_WINDOW', self.kill)
         
         self.search_pages = []
+        self.exchange_rates = {}
         self.queue_results = queue.Queue()
         self.queue_parse_ids = queue.Queue()
+        self.queue_exchange_rates = queue.Queue()
         self.start = False
         self.dead = False
         
-        for i in range(RESULTS_WIDTH + 2):
+        for i in range(constants.RESULTS_WIDTH + 2):
             self.columnconfigure(i, weight=1, minsize=70)
-        for i in range(RESULTS_HEIGHT + 1):
+        for i in range(constants.RESULTS_HEIGHT + 1):
             self.rowconfigure(i, weight=1, minsize=35)
         
         self.parse_config()
+        
+        for league in constants.LEAGUES:
+            er.ExchangeRatesThread(self, league)
         
         self.create_widgets()
         
@@ -96,21 +68,21 @@ class App(tk.Tk):
         config['system'] = {}
         config['output'] = {}
         
-        config.set('defaults', 'league', DEFAULT_LEAGUE)
-        config.set('defaults', 'maxprice', str(DEFAULT_MAXPRICE))
-        config.set('defaults', 'minprice', str(DEFAULT_MINPRICE))
-        config.set('defaults', 'currency', DEFAULT_CURRENCY)
-        config.set('defaults', 'sockets', str(DEFAULT_SOCKETS))
-        config.set('defaults', 'links', str(DEFAULT_LINKS))
-        config.set('defaults', 'frame type', DEFAULT_FRAME_TYPE)
+        config.set('defaults', 'league', constants.DEFAULT_LEAGUE)
+        config.set('defaults', 'maxprice', str(constants.DEFAULT_MAXPRICE))
+        config.set('defaults', 'minprice', str(constants.DEFAULT_MINPRICE))
+        config.set('defaults', 'currency', constants.DEFAULT_CURRENCY)
+        config.set('defaults', 'sockets', str(constants.DEFAULT_SOCKETS))
+        config.set('defaults', 'links', str(constants.DEFAULT_LINKS))
+        config.set('defaults', 'frame type', constants.DEFAULT_FRAME_TYPE)
         config.set('defaults', 'corrupted', 'y')
         config.set('defaults', 'crafted', 'y')
         
-        config.set('system', 'refresh_rate', str(DEFAULT_REFRESH_RATE))
+        config.set('system', 'refresh_rate', str(constants.DEFAULT_REFRESH_RATE))
         
-        config.set('output', 'max_console_size', str(DEFAULT_CONSOLE_SIZE))
-        config.set('output', 'beep_frequency', str(DEFAULT_BEEP_FREQUENCY))
-        config.set('output', 'beep_duration', str(DEFAULT_BEEP_DURATION))
+        config.set('output', 'max_console_size', str(constants.DEFAULT_CONSOLE_SIZE))
+        config.set('output', 'beep_frequency', str(constants.DEFAULT_BEEP_FREQUENCY))
+        config.set('output', 'beep_duration', str(constants.DEFAULT_BEEP_DURATION))
         config.set('output', 'clipboard', 'y')
         config.set('output', 'log', 'n')
         config.set('output', 'log_path', '')
@@ -121,22 +93,22 @@ class App(tk.Tk):
         except FileNotFoundError:
             pass
         
-        if config.get('defaults', 'league') in LEAGUES:
+        if config.get('defaults', 'league') in constants.LEAGUES:
             self.league = config.get('defaults', 'league')
         else:
-            self.league = DEFAULT_LEAGUE
+            self.league = constants.DEFAULT_LEAGUE
         self.maxprice = config.get('defaults', 'maxprice')
         self.minprice = config.get('defaults', 'minprice')
-        if config.get('defaults', 'currency') in CURRENCY_ABBREVIATED:
+        if config.get('defaults', 'currency') in constants.CURRENCY_ABBREVIATED:
             self.currency = config.get('defaults', 'currency')
         else:
-            self.currency = DEFAULT_CURRENCY
+            self.currency = constants.DEFAULT_CURRENCY
         self.sockets = config.get('defaults', 'sockets')
         self.links = config.get('defaults', 'links')
-        if config.get('defaults', 'frame type') in FRAME_TYPES:
+        if config.get('defaults', 'frame type') in constants.FRAME_TYPES:
             self.frame_type = config.get('defaults', 'frame type')
         else:
-            self.frame_type = DEFAULT_FRAME_TYPE
+            self.frame_type = constants.DEFAULT_FRAME_TYPE
         self.corrupted = (config.get('defaults', 'corrupted') == 'y')
         self.crafted = (config.get('defaults', 'crafted') == 'y')
         
@@ -153,7 +125,7 @@ class App(tk.Tk):
     def create_search_results(self):
         """Creates the search results pane."""
         self.results_frame = tk.Frame(self, bd=1, relief='sunken')
-        self.results_frame.grid(row=0, column=0, rowspan=RESULTS_HEIGHT, columnspan=RESULTS_WIDTH, padx=5, pady=5)
+        self.results_frame.grid(row=0, column=0, rowspan=constants.RESULTS_HEIGHT, columnspan=constants.RESULTS_WIDTH, padx=5, pady=5)
         
         self.results_scroll = tk.Scrollbar(self.results_frame)
         self.results_scroll.pack(side='right', fill='y')
@@ -168,7 +140,7 @@ class App(tk.Tk):
     def create_params_notebook(self):
         """Creates the notebook (tabs) for each set of search parameters"""
         self.params_notebook = ttk.Notebook(self)
-        self.params_notebook.grid(row=0, column=RESULTS_WIDTH, rowspan=RESULTS_HEIGHT, columnspan=4, padx=5, pady=5, sticky='nesw')
+        self.params_notebook.grid(row=0, column=constants.RESULTS_WIDTH, rowspan=constants.RESULTS_HEIGHT, columnspan=4, padx=5, pady=5, sticky='nesw')
         
         self.search_pages.append(SearchPage(self.params_notebook))
         self.search_pages.append(SearchPage(self.params_notebook))
@@ -184,14 +156,14 @@ class App(tk.Tk):
         stash data.
         """
         self.button_start = ttk.Button(self, text='Start', command=self.start_parsing, width=0)
-        self.button_start.grid(row=RESULTS_HEIGHT, column=RESULTS_WIDTH, padx=5, pady=5, sticky='ew')
+        self.button_start.grid(row=constants.RESULTS_HEIGHT, column=constants.RESULTS_WIDTH, padx=5, pady=5, sticky='ew')
         
     def create_button_stop(self):
         """Creates the stop button, which ends the automatic parsing
         of stash data.
         """
         self.button_stop = ttk.Button(self, text='Stop', command=self.stop_parsing, state='disabled', width=0)
-        self.button_stop.grid(row=RESULTS_HEIGHT, column=RESULTS_WIDTH + 1, padx=5, pady=5, sticky='ew')
+        self.button_stop.grid(row=constants.RESULTS_HEIGHT, column=constants.RESULTS_WIDTH + 1, padx=5, pady=5, sticky='ew')
         
     def kill(self):
         """Sets the flag to stop all functionality. Ensures that all
@@ -221,7 +193,7 @@ class App(tk.Tk):
         self.button_stop.configure(state='normal')
         self.handle_print('Starting search...')
         self.start = True
-        self.queue_parse_ids.put(requests.get(NINJA_API).json()['nextChangeId'])
+        self.queue_parse_ids.put(requests.get(constants.NEXT_API).json()['nextChangeId'])
         self.parse_stash_data()
         
     def stop_parsing(self):
@@ -248,18 +220,21 @@ class App(tk.Tk):
                 params_list = []
                 for page in self.search_pages:
                     params_list.append(page.get_params())
-                pt.ParserThread(self, parse_id, params_list)
+                pt.ParserThread(self, parse_id, params_list, self.exchange_rates)
                 self.after(self.refresh_rate, self.parse_stash_data)
             else:
                 self.after(50, self.parse_stash_data)
 
     def check_queue(self):
         """Checks whether any threads have reported results and, if
-        so, copies a message to the clipboard and reports them to the
-        results pane.
+        so, handles the results.
         """
         if not self.queue_results.empty():
             self.handle_result(self.queue_results.get())
+        if not self.queue_exchange_rates.empty():
+            tuple = self.queue_exchange_rates.get()
+            self.exchange_rates[tuple[0]] = tuple[1]
+            print(self.exchange_rates)
         self.after(50, self.check_queue)
         
     def handle_result(self, result):
@@ -306,7 +281,7 @@ class App(tk.Tk):
         price = round(float(to_parse[0]), 1)
         if price.is_integer():
             price = int(price)
-        return str(price) + ' ' + CURRENCY_NICE[CURRENCY_ABBREVIATED.index(to_parse[1])]
+        return str(price) + ' ' + constants.CURRENCY_NICE[constants.CURRENCY_ABBREVIATED.index(to_parse[1])]
 
 class SearchPage(ttk.Frame):
     """Custom widget that displays all of the search information."""
@@ -359,7 +334,7 @@ class SearchPage(ttk.Frame):
         
         self.option_league = ttk.Combobox(self, textvariable=self.league, state='readonly', width=0)
         self.option_league.grid(row=1, column=0, columnspan=2, padx=5, pady=1, sticky='ew')
-        self.option_league['values'] = LEAGUES
+        self.option_league['values'] = constants.LEAGUES
         
     def create_option_maxprice(self):
         """Creates the max price field. Max price determines the
@@ -389,11 +364,11 @@ class SearchPage(ttk.Frame):
         self.option_currency = []
         self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=0))
         self.option_currency[0].grid(row=3, column=0 + 1, padx=5, pady=1, sticky='ew')
-        self.option_currency[0]['values'] = CURRENCY_ABBREVIATED
+        self.option_currency[0]['values'] = constants.CURRENCY_ABBREVIATED
         
         self.option_currency.append(ttk.Combobox(self, textvariable=self.currency, state='readonly', width=0))
         self.option_currency[1].grid(row=5, column=0 + 1, padx=5, pady=1, sticky='ew')
-        self.option_currency[1]['values'] = CURRENCY_ABBREVIATED
+        self.option_currency[1]['values'] = constants.CURRENCY_ABBREVIATED
         
     def create_option_sockets(self):
         """Creates the sockets field. Sockets determines the minimum
@@ -424,7 +399,7 @@ class SearchPage(ttk.Frame):
         
         self.option_frame_type = ttk.Combobox(self, textvariable=self.frame_type, state='readonly', width=0)
         self.option_frame_type.grid(row=9, column=0, columnspan=2, padx=5, pady=1, sticky='ew')
-        self.option_frame_type['values'] = FRAME_TYPES
+        self.option_frame_type['values'] = constants.FRAME_TYPES
         
     def create_option_corrupted(self):
         """Creates the corrupted field. Corrupted determines whether
@@ -458,23 +433,23 @@ class SearchPage(ttk.Frame):
         try:
             maxprice = float(self.maxprice.get())
         except ValueError:
-            maxprice = DEFAULT_MAXPRICE
+            maxprice = constants.DEFAULT_MAXPRICE
         try:
             minprice = float(self.minprice.get())
         except ValueError:
-            minprice = DEFAULT_MINPRICE
+            minprice = constants.DEFAULT_MINPRICE
         try:
             sockets = int(self.sockets.get())
         except ValueError:
-            sockets = DEFAULT_SOCKETS
+            sockets = constants.DEFAULT_SOCKETS
         try:
             links = int(self.links.get())
         except ValueError:
-            links = DEFAULT_LINKS
+            links = constants.DEFAULT_LINKS
         
         return sp.SearchParameters(self.league.get(), maxprice, minprice,
                                    self.currency.get(), sockets, links,
-                                   FRAME_TYPES.index(self.frame_type.get()),
+                                   constants.FRAME_TYPES.index(self.frame_type.get()),
                                    self.corrupted.get(), self.crafted.get(),
                                    self.regex.get())
         

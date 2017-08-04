@@ -3,19 +3,19 @@ import threading
 
 import requests
 
-STASH_API = 'http://api.pathofexile.com/api/public-stash-tabs?id='
-LOCALIZATION = re.compile('<<.*>>')
+import constants
 
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
 
-    def __init__(self, spawner, parse_id, params_list):
+    def __init__(self, spawner, parse_id, params_list, exchange_rates):
         """Initializes the thread with a reference to the creator thread and specified seearch parameters."""
         threading.Thread.__init__(self)
         self.dead = False
         self.spawner = spawner
         self.parse_id = parse_id
         self.params_list = params_list
+        self.exchange_rates = exchange_rates
         self.start()
         
     def run(self):
@@ -33,7 +33,7 @@ class ParserThread(threading.Thread):
         """Reads the JSON data from the stash API into a dictionary.
         Also returns the id of the next chunk of data to the main thread via queue.
         """
-        stash_data = requests.get(STASH_API + self.parse_id).json()
+        stash_data = requests.get(constants.STASH_API + self.parse_id).json()
         self.spawner.queue_parse_ids.put(stash_data['next_change_id'])
         self.stashes = stash_data['stashes']
     
@@ -75,7 +75,7 @@ class ParserThread(threading.Thread):
         if not self.check_links(item['sockets'], params.links):
             return None
         
-        full_name = LOCALIZATION.sub('', ' '.join(filter(None, [item['name'], item['typeLine']])))
+        full_name = constants.LOCALIZATION.sub('', ' '.join(filter(None, [item['name'], item['typeLine']])))
         full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
         
         if not params.regex.search(full_text):
