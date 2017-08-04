@@ -29,7 +29,7 @@ CURRENCY_NICE = ['alteration', 'fusing', 'alchemy', 'chaos', 'gcp',
                  'chisel', 'scouring', 'blessed', 'regret', 'regal',
                  'divine', 'vaal']
 
-LEAGUES = ['Legacy', 'Standard', 'Hardcore']
+LEAGUES = ['Harbinger', 'Hardcore Harbinger' 'Standard', 'Hardcore']
 
 FRAME_TYPES = ['Normal', 'Magic', 'Rare', 'Unique', 'Gem',
                'Currency', 'Divination Card', 'Quest Item',
