@@ -80,17 +80,20 @@ class ParserThread(threading.Thread):
         
         if not params.regex.search(full_text):
             return None
-            
-        price_regex_match = params.price_regex.match(stash)
+        
+        price_regex_match = constants.PRICE_REGEX.match(stash)
         try:
-            price_regex_match = params.price_regex.match(item['note'])
+            price_regex_match = constants.PRICE_REGEX.match(item['note'])
         except KeyError:
             pass
-            
+        
         if not price_regex_match:
             return None
-            
-        if float(price_regex_match.group(2)) > params.maxprice or float(price_regex_match.group(2)) < params.minprice:
+        
+        # In essence, uses the league's exchange rates to get item's value in chaos
+        price = float(price_regex_match.group(2)) * self.exchange_rates.get(params.league).get(constants.CURRENCY_FULL[constants.CURRENCY_ABBREVIATED.index(price_regex_match.group(3))], 1.0)
+        
+        if price > params.maxprice or price < params.minprice:
             return None
         
         return full_name, price_regex_match

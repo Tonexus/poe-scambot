@@ -57,3 +57,4 @@ RESULTS_HEIGHT = 13
 # Regex for cleaning item text
 
 LOCALIZATION = re.compile('<<.*>>')
+PRICE_REGEX = re.compile('~(b/o|price) ([0-9]+) (' + '|'.join(CURRENCY_ABBREVIATED) + ')')

@@ -44,10 +44,11 @@ class App(tk.Tk):
         
         self.parse_config()
         
-        for league in constants.LEAGUES:
-            er.ExchangeRatesThread(self, league)
-        
         self.create_widgets()
+        
+        for league in constants.LEAGUES:
+            self.handle_print('Retrieving exchange rates for ' + league + ' league...')
+            er.ExchangeRatesThread(self, league)
         
         self.after(50, self.check_queue)
 
@@ -234,7 +235,7 @@ class App(tk.Tk):
         if not self.queue_exchange_rates.empty():
             tuple = self.queue_exchange_rates.get()
             self.exchange_rates[tuple[0]] = tuple[1]
-            print(self.exchange_rates)
+            self.handle_print('Successfully retrieved exchange rates for ' + tuple[0] + ' league.')
         self.after(50, self.check_queue)
         
     def handle_result(self, result):
@@ -434,24 +435,27 @@ class SearchPage(ttk.Frame):
             maxprice = float(self.maxprice.get())
         except ValueError:
             maxprice = constants.DEFAULT_MAXPRICE
+        maxprice *= self.master.master.exchange_rates.get(self.league.get()).get(constants.CURRENCY_FULL[constants.CURRENCY_ABBREVIATED.index(self.currency.get())], 1.0)
+        
         try:
             minprice = float(self.minprice.get())
         except ValueError:
             minprice = constants.DEFAULT_MINPRICE
+        minprice *= self.master.master.exchange_rates.get(self.league.get()).get(constants.CURRENCY_FULL[constants.CURRENCY_ABBREVIATED.index(self.currency.get())], 1.0)
+        
         try:
             sockets = int(self.sockets.get())
         except ValueError:
             sockets = constants.DEFAULT_SOCKETS
+        
         try:
             links = int(self.links.get())
         except ValueError:
             links = constants.DEFAULT_LINKS
         
-        return sp.SearchParameters(self.league.get(), maxprice, minprice,
-                                   self.currency.get(), sockets, links,
+        return sp.SearchParameters(self.league.get(), maxprice, minprice, sockets, links,
                                    constants.FRAME_TYPES.index(self.frame_type.get()),
-                                   self.corrupted.get(), self.crafted.get(),
-                                   self.regex.get())
+                                   self.corrupted.get(), self.crafted.get(), self.regex.get())
         
 if __name__ == '__main__':
     App().mainloop()
