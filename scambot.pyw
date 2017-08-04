@@ -1,6 +1,7 @@
 import time
 import os
 import queue
+import re
 import configparser
 import threading
 import tkinter as tk
@@ -9,7 +10,6 @@ from tkinter import ttk
 import requests
 
 import constants
-import searchparameters as sp
 import parserthread as pt
 import beepthread as bt
 import exchangerates as er
@@ -235,7 +235,10 @@ class App(tk.Tk):
         if not self.queue_exchange_rates.empty():
             tuple = self.queue_exchange_rates.get()
             self.exchange_rates[tuple[0]] = tuple[1]
-            self.handle_print('Successfully retrieved exchange rates for ' + tuple[0] + ' league.')
+            if tuple[1]:
+                self.handle_print('Successfully retrieved exchange rates for ' + tuple[0] + ' league.')
+            else:
+                self.handle_print('Failed to retrieve exchange rates for ' + tuple[0] + ' league.')
         self.after(50, self.check_queue)
         
     def handle_result(self, result):
@@ -453,9 +456,9 @@ class SearchPage(ttk.Frame):
         except ValueError:
             links = constants.DEFAULT_LINKS
         
-        return sp.SearchParameters(self.league.get(), maxprice, minprice, sockets, links,
-                                   constants.FRAME_TYPES.index(self.frame_type.get()),
-                                   self.corrupted.get(), self.crafted.get(), self.regex.get())
+        return {'league': self.league.get(), 'maxprice': maxprice, 'minprice': minprice, 'sockets': sockets,
+                'links': links, 'frame type': constants.FRAME_TYPES.index(self.frame_type.get()),
+                'corrupted': self.corrupted.get(), 'crafted': self.crafted.get(), 'regex': re.compile(self.regex.get(), re.IGNORECASE)}
         
 if __name__ == '__main__':
     App().mainloop()

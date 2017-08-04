@@ -54,31 +54,31 @@ class ParserThread(threading.Thread):
     
     def check_item(self, item, stash, params):
         """Checks whether the item matches specifications."""
-        if not params.regex.pattern:
+        if not params['regex'].pattern:
             return None
         
-        if not item['league'] == params.league:
+        if not item['league'] == params['league']:
             return None
             
-        if not params.corrupted and item['corrupted'] == 'True':
+        if not params['corrupted'] and item['corrupted'] == 'True':
             return None
             
-        if not params.crafted and 'craftedMods' in item:
+        if not params['crafted'] and 'craftedMods' in item:
             return None
             
-        if not params.frame_type == item['frameType']:
+        if not params['frame type'] == item['frameType']:
             return None
             
-        if len(item['sockets']) < params.sockets:
+        if len(item['sockets']) < params['sockets']:
             return None
         
-        if not self.check_links(item['sockets'], params.links):
+        if not self.check_links(item['sockets'], params['links']):
             return None
         
         full_name = constants.LOCALIZATION.sub('', ' '.join(filter(None, [item['name'], item['typeLine']])))
         full_text = ' '.join([full_name] + (item['implicitMods'] if 'implicitMods' in item else []) + (item['explicitMods'] if 'explicitMods' in item else []))
         
-        if not params.regex.search(full_text):
+        if not params['regex'].search(full_text):
             return None
         
         price_regex_match = constants.PRICE_REGEX.match(stash)
@@ -91,9 +91,9 @@ class ParserThread(threading.Thread):
             return None
         
         # In essence, uses the league's exchange rates to get item's value in chaos
-        price = float(price_regex_match.group(2)) * self.exchange_rates.get(params.league).get(constants.CURRENCY_FULL[constants.CURRENCY_ABBREVIATED.index(price_regex_match.group(3))], 1.0)
+        price = float(price_regex_match.group(2)) * self.exchange_rates[params['league']].get(constants.CURRENCY_FULL[constants.CURRENCY_ABBREVIATED.index(price_regex_match.group(3))], 1.0)
         
-        if price > params.maxprice or price < params.minprice:
+        if price > params['maxprice'] or price < params['minprice']:
             return None
         
         return full_name, price_regex_match
