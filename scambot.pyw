@@ -12,7 +12,7 @@ import constants
 import searchpage as sp
 import parserthread as pt
 import beepthread as bt
-import exchangerates as er
+import exchangeratesthread as ert
 
 class App(tk.Tk):
     """App that centralizes all of the live search functionality with
@@ -48,7 +48,7 @@ class App(tk.Tk):
 
         for league in constants.LEAGUES:
             self.handle_print('Retrieving exchange rates for ' + league + ' league...')
-            er.ExchangeRatesThread(self, league)
+            ert.ExchangeRatesThread(self, league)
 
         self.after(50, self.check_queue)
 
