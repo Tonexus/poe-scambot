@@ -7,7 +7,7 @@ import constants
 class ParserThread(threading.Thread):
     """Thread that parses each chunk of stash API data"""
 
-    def __init__(self, spawner, parse_id, params_list, exchange_rates):
+    def __init__(self, spawner, parse_id, params_list, exchange_rates, black_list):
         """Initializes the thread with a reference to the creator thread and specified seearch parameters."""
         threading.Thread.__init__(self)
         self.dead = False
@@ -15,6 +15,7 @@ class ParserThread(threading.Thread):
         self.parse_id = parse_id
         self.params_list = params_list
         self.exchange_rates = exchange_rates
+        self.black_list = black_list
         self.start()
 
     def run(self):
@@ -45,15 +46,18 @@ class ParserThread(threading.Thread):
                 if self.dead:
                     return
                 for params in self.params_list:
-                    checked_item = self.check_item(item, stash['stash'], params)
+                    checked_item = self.check_item(item, stash['stash'], stash['lastCharacterName'], params)
                     if checked_item:
                         self.spawner.queue_results.put({'name':stash['lastCharacterName'], 'item':checked_item[0],
                                                         'price':checked_item[1], 'league':item['league'],
                                                         'stash':stash['stash'], 'x':item['x'], 'y':item['y']})
 
-    def check_item(self, item, stash, params):
+    def check_item(self, item, stash, name, params):
         """Checks whether the item matches specifications."""
         if not params['regex'].pattern:
+            return None
+        
+        if name in self.black_list:
             return None
 
         if not item['league'] == params['league']:

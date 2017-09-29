@@ -46,6 +46,17 @@ class App(tk.Tk):
 
         self.create_widgets()
 
+        self.black_list = []
+        if self.black_list_on:
+            self.handle_print('Reading black list file...')
+            try:
+                with open(self.black_list_path, 'r') as black_list_file:
+                    self.black_list = black_list_file.readlines()
+            except OSError as e:
+                self.handle_print('Failed to read black list file.')
+            else:
+                self.handle_print('Successfully read black list file.')
+        
         for league in constants.LEAGUES:
             self.handle_print('Retrieving exchange rates for ' + league + ' league...')
             ert.ExchangeRatesThread(self, league)
@@ -87,6 +98,8 @@ class App(tk.Tk):
         config.set('output', 'clipboard', 'y')
         config.set('output', 'log', 'n')
         config.set('output', 'log_path', '')
+        config.set('output', 'black_list', 'n')
+        config.set('output', 'black_list_path', '')
 
         try:
             with open(fn, 'r') as cfg_file:
@@ -119,9 +132,12 @@ class App(tk.Tk):
         self.beep_frequency = int(config.get('output', 'beep_frequency'))
         self.beep_duration = int(config.get('output', 'beep_duration'))
         self.clipboard = config.get('output', 'clipboard') == 'y'
-        self.log = config.get('output', 'log') == 'y'
-        if self.log:
+        self.log_on = config.get('output', 'log') == 'y'
+        if self.log_on:
             self.log_path = config.get('output', 'log_path')
+        self.black_list_on = config.get('output', 'black_list') == 'y'
+        if self.black_list_on:
+            self.black_list_path = config.get('output', 'black_list_path')
 
     def create_search_results(self):
         """Creates the search results pane."""
@@ -197,11 +213,14 @@ class App(tk.Tk):
         self.handle_print('Starting search...')
         self.start = True
         # In case ninja API fails
+        self.handle_print('Retrieving next change id from poe.ninja...')
         try:
             self.queue_parse_ids.put(requests.get(constants.NEXT_API).json()[constants.NEXT_ID])
         except KeyError as e:
-            self.handle_print('Failed to retrieve latest next change id, starting from beginning.')
+            self.handle_print('Failed to retrieve next change id, starting from beginning.')
             self.queue_parse_ids.put('')
+        else:
+            self.handle_print('Successfully retrieved next change id.')
         self.parse_stash_data()
 
     def stop_parsing(self):
@@ -228,7 +247,7 @@ class App(tk.Tk):
                 params_list = []
                 for page in self.search_pages:
                     params_list.append(page.get_params())
-                pt.ParserThread(self, parse_id, params_list, self.exchange_rates)
+                pt.ParserThread(self, parse_id, params_list, self.exchange_rates, self.black_list)
                 self.after(self.refresh_rate, self.parse_stash_data)
             else:
                 self.after(50, self.parse_stash_data)
@@ -280,12 +299,12 @@ class App(tk.Tk):
         if scroll:
             self.results_text.see('end')
 
-        if self.log:
+        if self.log_on:
             try:
                 with open(self.log_path, 'a') as log_file:
                     log_file.write(new_string)
             except OSError:
-                self.log = False
+                self.log_on = False
 
     def make_nice_price(self, to_parse):
         """Returns the unabbreviated name of the currency."""
