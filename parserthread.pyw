@@ -63,7 +63,7 @@ class ParserThread(threading.Thread):
         if not item['league'] == params['league']:
             return None
 
-        if not params['corrupted'] and item['corrupted'] == 'True':
+        if not params['corrupted'] and item['corrupted']:
             return None
 
         if not params['crafted'] and 'craftedMods' in item:
