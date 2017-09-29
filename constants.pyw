@@ -58,3 +58,7 @@ RESULTS_HEIGHT = 13
 
 LOCALIZATION = re.compile('<<.*>>')
 PRICE_REGEX = re.compile('~(b/o|price) ([0-9]+) (' + '|'.join(CURRENCY_ABBREVIATED) + ')')
+
+# ninja API constants
+
+NEXT_ID = 'next_change_id'

@@ -196,7 +196,12 @@ class App(tk.Tk):
         self.button_stop.configure(state='normal')
         self.handle_print('Starting search...')
         self.start = True
-        self.queue_parse_ids.put(requests.get(constants.NEXT_API).json()['nextChangeId'])
+        # In case ninja API fails
+        try:
+            self.queue_parse_ids.put(requests.get(constants.NEXT_API).json()[constants.NEXT_ID])
+        except KeyError as e:
+            self.handle_print('Failed to retrieve latest next change id, starting from beginning.')
+            self.queue_parse_ids.put('')
         self.parse_stash_data()
 
     def stop_parsing(self):
