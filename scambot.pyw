@@ -46,12 +46,13 @@ class App(tk.Tk):
 
         self.create_widgets()
 
-        self.black_list = []
+        # Use dict as hashtable for fast checking
+        self.black_list = {}
         if self.black_list_on:
             self.handle_print('Reading black list file...')
             try:
                 with open(self.black_list_path, 'r') as black_list_file:
-                    self.black_list = black_list_file.readlines()
+                    self.black_list = {k: 1 for k in black_list_file.readlines()}
             except OSError as e:
                 self.handle_print('Failed to read black list file.')
             else:
